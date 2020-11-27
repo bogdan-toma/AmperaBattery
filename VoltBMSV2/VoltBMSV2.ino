@@ -43,7 +43,7 @@ EEPROMSettings settings;
 
 
 /////Version Identifier/////////
-int firmver = 311020;
+int firmver = 201127;
 
 //Curent filter//
 float filterFrequency = 5.0 ;
@@ -250,7 +250,7 @@ void loadSettings()
   settings.CurDead = 5;// mV of dead band on current sensor
   settings.ChargerDirect = 1; //1 - charger is always connected to HV battery // 0 - Charger is behind the contactors
   settings.disp = 1; // 1 - display is used 0 - mirror serial data onto serial bus
-  settings.SerialCan = 1; // 1- serial can adapter used 0- Not used
+  settings.SerialCan = 0; // 1- serial can adapter used 0- Not used
   settings.SerialCanSpeed = 500; //serial can adapter speed
   settings.DCDCreq = 140; //requested DCDC voltage output in 0.1V
   settings.SerialCanBaud = 19200;
@@ -630,6 +630,14 @@ void loop()
           break;
 
         case (Charge):
+          if (settings.ChargerDirect > 0)
+          {
+            Discharge = 0;
+            digitalWrite(OUT4, LOW);
+            digitalWrite(OUT2, LOW);
+            digitalWrite(OUT1, LOW);//turn off discharge
+            contctrl = 0; //turn off out 5 and 6
+          }
           Discharge = 0;
           digitalWrite(OUT3, HIGH);//enable charger
           if (bms.getHighCellVolt() > settings.balanceVoltage)
@@ -825,8 +833,11 @@ void loop()
     }
     else
     {
-
-      CanSerial();
+      if (bmsstatus == Charge)
+      {
+        chargercomms();
+      }
+      //CanSerial();
     }
 
   }
@@ -1352,7 +1363,7 @@ void SOCcharged(int y)
 
 void Prechargecon()
 {
-  if (digitalRead(IN1) == HIGH) //detect Key ON
+  if (digitalRead(IN1) == HIGH || digitalRead(IN3) == HIGH) //detect Key ON or AC present
   {
     digitalWrite(OUT4, HIGH);//Negative Contactor Close
     contctrl = 2;
@@ -1365,6 +1376,21 @@ void Prechargecon()
       digitalWrite(OUT1, HIGH);//Positive Contactor Close
       contctrl = 3;
       bmsstatus = Drive;
+      if (settings.ChargerDirect == 1)
+      {
+        bmsstatus = Drive;
+      }
+      else
+      {
+        if (digitalRead(IN3) == HIGH)
+        {
+          bmsstatus = Charge;
+        }
+        if (digitalRead(IN1) == HIGH)
+        {
+          bmsstatus = Drive;
+        }
+      }
       digitalWrite(OUT2, LOW);
     }
   }
@@ -3214,6 +3240,11 @@ void dashupdate()
   Serial2.write(0xff);  // We always have to send this three lines after each command sent to the nextion display.
   Serial2.write(0xff);
   Serial2.write(0xff);
+  Serial2.print("celldelta.val=");
+  Serial2.print(bms.getHighCellVolt() * 1000 - bms.getLowCellVolt() * 1000, 0);
+  Serial2.write(0xff);  // We always have to send this three lines after each command sent to the nextion display.
+  Serial2.write(0xff);
+  Serial2.write(0xff);
   Serial2.print("firm.val=");
   Serial2.print(firmver);
   Serial2.write(0xff);  // We always have to send this three lines after each command sent to the nextion display.
@@ -3416,7 +3447,7 @@ void SetSerialBaud(uint32_t Speed)
       settings.SerialCanBaud = 9600;
       canSerial.flush();
       canSerial.begin(9600);
-      can.exitSettingMode();
+      //can.exitSettingMode();
       break;
 
     case 19200:
@@ -3424,7 +3455,7 @@ void SetSerialBaud(uint32_t Speed)
       settings.SerialCanBaud = 19200;
       canSerial.flush();
       canSerial.begin(19200);
-      can.exitSettingMode();
+      //can.exitSettingMode();
       break;
 
     case 38400:
@@ -3432,7 +3463,7 @@ void SetSerialBaud(uint32_t Speed)
       settings.SerialCanBaud = 38400;
       canSerial.flush();
       canSerial.begin(38400);
-      can.exitSettingMode();
+      //can.exitSettingMode();
       break;
 
     case 115200:
@@ -3440,7 +3471,7 @@ void SetSerialBaud(uint32_t Speed)
       settings.SerialCanBaud = 115200;
       canSerial.flush();
       canSerial.begin(115200);
-      can.exitSettingMode();
+      //can.exitSettingMode();
       break;
 
     default:
