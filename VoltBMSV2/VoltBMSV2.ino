@@ -43,7 +43,7 @@ EEPROMSettings settings;
 
 
 /////Version Identifier/////////
-int firmver = 201127;
+int firmver = 201212;
 
 //Curent filter//
 float filterFrequency = 5.0 ;
@@ -225,9 +225,9 @@ void loadSettings()
   settings.DisTaper = 0.3f; //V offset to bring in discharge taper to Zero Amps at settings.DischVsetpoint
   settings.chargecurrentmax = 300; //max charge current in 0.1A
   settings.chargecurrentend = 50; //end charge current in 0.1A
-  settings.socvolt[0] = 3100; //Voltage and SOC curve for voltage based SOC calc
+  settings.socvolt[0] = 3500; //Voltage and SOC curve for voltage based SOC calc
   settings.socvolt[1] = 10; //Voltage and SOC curve for voltage based SOC calc
-  settings.socvolt[2] = 4100; //Voltage and SOC curve for voltage based SOC calc
+  settings.socvolt[2] = 3900; //Voltage and SOC curve for voltage based SOC calc
   settings.socvolt[3] = 90; //Voltage and SOC curve for voltage based SOC calc
   settings.invertcur = 0; //Invert current sensor direction
   settings.cursens = 2;
@@ -248,7 +248,7 @@ void loadSettings()
   settings.chargerspd = 100; //ms per message
   settings.UnderDur = 5000; //ms of allowed undervoltage before throwing open stopping discharge.
   settings.CurDead = 5;// mV of dead band on current sensor
-  settings.ChargerDirect = 1; //1 - charger is always connected to HV battery // 0 - Charger is behind the contactors
+  settings.ChargerDirect = 0; //1 - charger is always connected to HV battery // 0 - Charger is behind the contactors
   settings.disp = 1; // 1 - display is used 0 - mirror serial data onto serial bus
   settings.SerialCan = 0; // 1- serial can adapter used 0- Not used
   settings.SerialCanSpeed = 500; //serial can adapter speed
@@ -561,7 +561,7 @@ void loop()
       //pwmcomms();
     }
     else
-    {
+{
       switch (bmsstatus)
       {
         case (Boot):
@@ -581,6 +581,7 @@ void loop()
           digitalWrite(OUT2, LOW);
           digitalWrite(OUT1, LOW);//turn off discharge
           contctrl = 0; //turn off out 5 and 6
+          //accurlim = 0;
           if (bms.getHighCellVolt() > settings.balanceVoltage && bms.getHighCellVolt() > bms.getLowCellVolt() + settings.balanceHyst)
           {
             //bms.balanceCells();
@@ -590,7 +591,7 @@ void loop()
           {
             balancecells = 0;
           }
-          if (digitalRead(IN3) == HIGH && (bms.getHighCellVolt() < (settings.ChargeVsetpoint - settings.ChargeHys))) //detect AC present for charging and check not balancing
+          if (digitalRead(IN3) == HIGH && (bms.getHighCellVolt() < (settings.ChargeVsetpoint - settings.ChargeHys)) && bms.getHighTemperature() < (settings.OverTSetpoint - settings.WarnToff)) //detect AC present for charging and check not balancing
           {
             if (settings.ChargerDirect == 1)
             {
@@ -618,11 +619,12 @@ void loop()
 
         case (Drive):
           Discharge = 1;
+          //accurlim = 0;
           if (digitalRead(IN1) == LOW)//Key OFF
           {
             bmsstatus = Ready;
           }
-          if (digitalRead(IN3) == HIGH && (bms.getHighCellVolt() < (settings.ChargeVsetpoint - settings.ChargeHys))) //detect AC present for charging and check not balancing
+          if (digitalRead(IN3) == HIGH && (bms.getHighCellVolt() < (settings.ChargeVsetpoint - settings.ChargeHys)) && bms.getHighTemperature() < (settings.OverTSetpoint - settings.WarnToff)) //detect AC present for charging and check not balancing
           {
             bmsstatus = Charge;
           }
@@ -639,6 +641,16 @@ void loop()
             contctrl = 0; //turn off out 5 and 6
           }
           Discharge = 0;
+          /*
+          if (digitalRead(IN2) == HIGH)
+          {
+            chargecurrentlimit = true;
+          }
+          else
+          {
+            chargecurrentlimit = false;
+          }
+          */
           digitalWrite(OUT3, HIGH);//enable charger
           if (bms.getHighCellVolt() > settings.balanceVoltage)
           {
@@ -649,7 +661,7 @@ void loop()
           {
             balancecells = 0;
           }
-          if (bms.getHighCellVolt() > settings.ChargeVsetpoint)
+          if (bms.getHighCellVolt() > settings.ChargeVsetpoint || bms.getHighTemperature() > settings.OverTSetpoint)
           {
             if (bms.getAvgCellVolt() > (settings.ChargeVsetpoint - settings.ChargeHys))
             {
@@ -681,17 +693,10 @@ void loop()
                       bmsstatus = Charge;
                     }
           */
-          if (digitalRead(IN1) == LOW)//Key OFF
+          if (bms.getLowCellVolt() > settings.UnderVSetpoint && bms.getHighCellVolt() < settings.OverVSetpoint)
           {
-            //if (cellspresent == bms.seriescells()) //detect a fault in cells detected
-            //{
-            if (bms.getLowCellVolt() >= settings.UnderVSetpoint && bms.getHighCellVolt() <= settings.OverVSetpoint)
-            {
-              bmsstatus = Ready;
-            }
-            //}
+            bmsstatus = Ready;
           }
-
           break;
       }
     }
@@ -1375,7 +1380,6 @@ void Prechargecon()
     {
       digitalWrite(OUT1, HIGH);//Positive Contactor Close
       contctrl = 3;
-      bmsstatus = Drive;
       if (settings.ChargerDirect == 1)
       {
         bmsstatus = Drive;
