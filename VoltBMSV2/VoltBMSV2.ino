@@ -245,7 +245,7 @@ void loadSettings()
   settings.ESSmode = 0; //activate ESS mode
   settings.ncur = 1; //number of multiples to use for current measurement
   settings.chargertype = 2; // 1 - Brusa NLG5xx 2 - Volt charger 0 -No Charger
-  settings.chargerspd = 100; //ms per message
+  settings.chargerspd = 500; //ms per message
   settings.UnderDur = 5000; //ms of allowed undervoltage before throwing open stopping discharge.
   settings.CurDead = 5;// mV of dead band on current sensor
   settings.ChargerDirect = 0; //1 - charger is always connected to HV battery // 0 - Charger is behind the contactors
@@ -560,8 +560,7 @@ void loop()
       }
       //pwmcomms();
     }
-    else
-{
+    else {
       switch (bmsstatus)
       {
         case (Boot):
@@ -1386,11 +1385,11 @@ void Prechargecon()
       }
       else
       {
-        if (digitalRead(IN3) == HIGH)
+        if (digitalRead(IN3) == HIGH) // AC present
         {
           bmsstatus = Charge;
         }
-        if (digitalRead(IN1) == HIGH)
+        if (digitalRead(IN1) == HIGH) // Key ON
         {
           bmsstatus = Drive;
         }
@@ -1541,6 +1540,7 @@ void calcur()
   SERIALCONSOLE.print(" current offset 2 calibrated ");
   SERIALCONSOLE.println("  ");
 }
+
 void VEcan() //communication with Victron system over CAN
 {
   msg.id  = 0x351;
@@ -1874,7 +1874,7 @@ void menu()
         incomingByte = 'c';
         break;
 
-case '8':
+      case '8':
         menuload = 1;
         if (Serial.available() > 0)
         {
