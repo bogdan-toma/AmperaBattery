@@ -43,7 +43,7 @@ EEPROMSettings settings;
 
 
 /////Version Identifier/////////
-int firmver = 201212;
+int firmver = 201214;
 
 //Curent filter//
 float filterFrequency = 5.0 ;
@@ -200,12 +200,12 @@ void loadSettings()
   settings.checksum = 2;
   settings.canSpeed = 125000;
   settings.batteryID = 0x01; //in the future should be 0xFF to force it to ask for an address
-  settings.OverVSetpoint = 4.2f;
-  settings.UnderVSetpoint = 3.0f;
-  settings.ChargeVsetpoint = 4.1f;
-  settings.ChargeHys = 0.2f; // voltage drop required for charger to kick back on
+  settings.OverVSetpoint = 4.1f;
+  settings.UnderVSetpoint = 3.3f;
+  settings.ChargeVsetpoint = 4.05f;
+  settings.ChargeHys = 0.15f; // voltage drop required for charger to kick back on
   settings.WarnOff = 0.1f; //voltage offset to raise a warning
-  settings.DischVsetpoint = 3.2f;
+  settings.DischVsetpoint = 3.5f;
   settings.CellGap = 0.2f; //max delta between high and low cell
   settings.OverTSetpoint = 65.0f;
   settings.UnderTSetpoint = -10.0f;
@@ -214,18 +214,18 @@ void loadSettings()
   settings.WarnToff = 5.0f; //temp offset before raising warning
   settings.IgnoreTemp = 0; // 0 - use both sensors, 1 or 2 only use that sensor
   settings.IgnoreVolt = 0.5;//
-  settings.balanceVoltage = 3.9f;
-  settings.balanceHyst = 0.04f;
+  settings.balanceVoltage = 4.0f;
+  settings.balanceHyst = 0.015f;
   settings.logLevel = 2;
-  settings.CAP = 100; //battery size in Ah
+  settings.CAP = 35; //battery size in Ah
   settings.Pstrings = 2; // strings in parallel used to divide voltage of pack
   settings.Scells = 48;//Cells in series
   settings.StoreVsetpoint = 3.8; // V storage mode charge max
-  settings.discurrentmax = 300; // max discharge current in 0.1A
+  settings.discurrentmax = 2000; // max discharge current in 0.1A
   settings.DisTaper = 0.3f; //V offset to bring in discharge taper to Zero Amps at settings.DischVsetpoint
   settings.chargecurrentmax = 300; //max charge current in 0.1A
   settings.chargecurrentend = 50; //end charge current in 0.1A
-  settings.socvolt[0] = 3500; //Voltage and SOC curve for voltage based SOC calc
+  settings.socvolt[0] = 3550; //Voltage and SOC curve for voltage based SOC calc
   settings.socvolt[1] = 10; //Voltage and SOC curve for voltage based SOC calc
   settings.socvolt[2] = 3900; //Voltage and SOC curve for voltage based SOC calc
   settings.socvolt[3] = 90; //Voltage and SOC curve for voltage based SOC calc
@@ -244,8 +244,8 @@ void loadSettings()
   settings.gaugehigh = 255; //full fuel gauge pwm
   settings.ESSmode = 0; //activate ESS mode
   settings.ncur = 1; //number of multiples to use for current measurement
-  settings.chargertype = 2; // 1 - Brusa NLG5xx 2 - Volt charger 0 -No Charger
-  settings.chargerspd = 500; //ms per message
+  settings.chargertype = 4; // 1 - Brusa NLG5xx 2 - Volt charger 0 -No Charger
+  settings.chargerspd = 100; //ms per message
   settings.UnderDur = 5000; //ms of allowed undervoltage before throwing open stopping discharge.
   settings.CurDead = 5;// mV of dead band on current sensor
   settings.ChargerDirect = 0; //1 - charger is always connected to HV battery // 0 - Charger is behind the contactors
@@ -475,15 +475,14 @@ void loop()
           break;
 
         case (Charge):
+          Discharge = 0;
           if (settings.ChargerDirect > 0)
           {
-            Discharge = 0;
             digitalWrite(OUT4, LOW);
             digitalWrite(OUT2, LOW);
             digitalWrite(OUT1, LOW);//turn off discharge
             contctrl = 0; //turn off out 5 and 6
           }
-          Discharge = 0;
           /*
           if (digitalRead(IN2) == HIGH)
           {
@@ -664,13 +663,21 @@ void loop()
     {
       if (bmsstatus == Charge)
       {
-        chargercomms();
+        chargercomms(0x00);
+      } 
+      else 
+      {
+        chargercomms(0x01);
       }
       //CanSerial();
     }
 
   }
 
+}
+
+bool shouldBalance() {
+  
 }
 
 void alarmupdate()
@@ -3016,6 +3023,11 @@ void dashupdate()
   Serial2.write(0xff);  // We always have to send this three lines after each command sent to the nextion display.
   Serial2.write(0xff);
   Serial2.write(0xff);
+  Serial2.print("cellbal.val=");
+  Serial2.print(balancecells);
+  Serial2.write(0xff);  // We always have to send this three lines after each command sent to the nextion display.
+  Serial2.write(0xff);
+  Serial2.write(0xff);
   Serial2.print("firm.val=");
   Serial2.print(firmver);
   Serial2.write(0xff);  // We always have to send this three lines after each command sent to the nextion display.
@@ -3023,7 +3035,7 @@ void dashupdate()
   Serial2.write(0xff);
 }
 
-void chargercomms()
+void chargercomms(byte contCh)
 {
   if (settings.chargertype == Elcon)
   {
@@ -3034,7 +3046,7 @@ void chargercomms()
     msg.buf[1] = lowByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
     msg.buf[2] = highByte(chargecurrent / ncharger);
     msg.buf[3] = lowByte(chargecurrent / ncharger);
-    msg.buf[4] = 0x00;
+    msg.buf[4] = contCh;
     msg.buf[5] = 0x00;
     msg.buf[6] = 0x00;
     msg.buf[7] = 0x00;
