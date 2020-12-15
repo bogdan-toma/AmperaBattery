@@ -43,7 +43,7 @@ EEPROMSettings settings;
 
 
 /////Version Identifier/////////
-int firmver = 201214;
+int firmver = 201206;
 
 //Curent filter//
 float filterFrequency = 5.0 ;
@@ -141,7 +141,7 @@ int value;
 float currentact, RawCur;
 float ampsecond;
 unsigned long lasttime;
-unsigned long looptime, UnderTime, looptime1, cleartime = 0; //ms
+unsigned long looptime, UnderTime, looptime1, cleartime, loopTimeBalance = 0; //ms
 int currentsense = 14;
 int sensor = 1;
 
@@ -176,7 +176,7 @@ int outputstate = 0;
 int incomingByte = 0;
 int storagemode = 0;
 int x = 0;
-int balancecells;
+int balancecells = 0;
 int cellspresent = 0;
 
 //Debugging modes//////////////////
@@ -215,28 +215,28 @@ void loadSettings()
   settings.IgnoreTemp = 0; // 0 - use both sensors, 1 or 2 only use that sensor
   settings.IgnoreVolt = 0.5;//
   settings.balanceVoltage = 4.0f;
-  settings.balanceHyst = 0.015f;
+  settings.balanceHyst = 0.020f;
   settings.logLevel = 2;
-  settings.CAP = 35; //battery size in Ah
+  settings.CAP = 30; //battery size in Ah
   settings.Pstrings = 2; // strings in parallel used to divide voltage of pack
   settings.Scells = 48;//Cells in series
   settings.StoreVsetpoint = 3.8; // V storage mode charge max
-  settings.discurrentmax = 2000; // max discharge current in 0.1A
+  settings.discurrentmax = 3000; // max discharge current in 0.1A
   settings.DisTaper = 0.3f; //V offset to bring in discharge taper to Zero Amps at settings.DischVsetpoint
   settings.chargecurrentmax = 300; //max charge current in 0.1A
   settings.chargecurrentend = 50; //end charge current in 0.1A
   settings.socvolt[0] = 3550; //Voltage and SOC curve for voltage based SOC calc
   settings.socvolt[1] = 10; //Voltage and SOC curve for voltage based SOC calc
-  settings.socvolt[2] = 3900; //Voltage and SOC curve for voltage based SOC calc
+  settings.socvolt[2] = 4000; //Voltage and SOC curve for voltage based SOC calc
   settings.socvolt[3] = 90; //Voltage and SOC curve for voltage based SOC calc
   settings.invertcur = 1; //Invert current sensor direction
   settings.cursens = 1;
-  settings.voltsoc = 0; //SOC purely voltage based
+  settings.voltsoc = 1; //SOC purely voltage based
   settings.Pretime = 5000; //ms of precharge time
   settings.conthold = 50; //holding duty cycle for contactor 0-255
   settings.Precurrent = 1000; //ma before closing main contator
-  settings.convhigh = 6.15; // mV/A current sensor high range channel
-  settings.convlow = 100; // mV/A current sensor low range channel
+  settings.convhigh = 61.5; // mV/A current sensor high range channel
+  settings.convlow = 1000; // mV/A current sensor low range channel
   settings.changecur = 20000;//mA change overpoint
   settings.offset1 = 1750; //mV mid point of channel 1
   settings.offset2 = 1750;//mV mid point of channel 2
@@ -425,16 +425,23 @@ void loop()
           digitalWrite(OUT1, LOW);//turn off discharge
           contctrl = 0; //turn off out 5 and 6
           //accurlim = 0;
-          if (bms.getHighCellVolt() > settings.balanceVoltage && bms.getHighCellVolt() > bms.getLowCellVolt() + settings.balanceHyst)
+          if (bms.getHighCellVolt() > settings.balanceVoltage)
           {
-            //bms.balanceCells();
-            balancecells = 1;
+            if (bms.getHighCellVolt() - bms.getLowCellVolt() <= (settings.balanceHyst / 2))
+            {
+              balancecells = 0;
+            }
+            else 
+            {
+              balancecells = 1;
+            }
           }
           else
           {
             balancecells = 0;
           }
-          if (digitalRead(IN3) == HIGH && (bms.getHighCellVolt() < (settings.ChargeVsetpoint - settings.ChargeHys)) && bms.getHighTemperature() < (settings.OverTSetpoint - settings.WarnToff)) //detect AC present for charging and check not balancing
+
+          if (digitalRead(IN3) == HIGH && balancecells == 0 && bms.getHighTemperature() < (settings.OverTSetpoint - settings.WarnToff)) //detect AC present for charging and check not balancing
           {
             if (settings.ChargerDirect == 1)
             {
@@ -447,7 +454,8 @@ void loop()
             }
           }
           if (digitalRead(IN1) == HIGH) //detect Key ON
-          {
+          { 
+            balancecells = 0; // stop balancing
             bmsstatus = Precharge;
             Pretimer = millis();
           }
@@ -467,7 +475,7 @@ void loop()
           {
             bmsstatus = Ready;
           }
-          if (digitalRead(IN3) == HIGH && (bms.getHighCellVolt() < (settings.ChargeVsetpoint - settings.ChargeHys)) && bms.getHighTemperature() < (settings.OverTSetpoint - settings.WarnToff)) //detect AC present for charging and check not balancing
+          if (digitalRead(IN3) == HIGH) //detect AC present for charging
           {
             bmsstatus = Charge;
           }
@@ -476,6 +484,7 @@ void loop()
 
         case (Charge):
           Discharge = 0;
+          balancecells = 0;
           if (settings.ChargerDirect > 0)
           {
             digitalWrite(OUT4, LOW);
@@ -494,10 +503,11 @@ void loop()
           }
           */
           digitalWrite(OUT3, HIGH);//enable charger
-          if (bms.getHighCellVolt() > settings.balanceVoltage)
+          if (bms.getHighCellVolt() > settings.balanceVoltage && bms.getHighCellVolt() - bms.getLowCellVolt() > (settings.balanceHyst))
           {
             //bms.balanceCells();
             balancecells = 1;
+            bmsstatus = Ready;
           }
           else
           {
@@ -598,9 +608,9 @@ void loop()
     updateSOC();
     currentlimit();
 
-    VEcan();
-
-    sendcommand();
+    //VEcan();
+    balanceCan();
+    sendcommand(); // request voltage from Volt BICM
     if (cellspresent == 0 && SOCset == 1)
     {
       cellspresent = bms.seriescells();
@@ -625,6 +635,12 @@ void loop()
 
     resetwdog();
   }
+
+  // if (millis() - loopTimeBalance > 200) {
+  //   balanceCan();
+    
+  //   loopTimeBalance = millis();
+  // }
 
   if (millis() - cleartime > 5000)
   {
@@ -677,7 +693,7 @@ void loop()
 }
 
 bool shouldBalance() {
-  
+
 }
 
 void alarmupdate()
@@ -1407,33 +1423,15 @@ void VEcan() //communication with Victron system over CAN
   msg.buf[6] = bmsmanu[6];
   msg.buf[7] = bmsmanu[7];
   Can0.write(msg);
+}
 
+void balanceCan() // send CAN commands to balance cells
+{
   if (balancecells == 1)
   {
-    if (bms.getLowCellVolt() + settings.balanceHyst < bms.getHighCellVolt())
-    {
-      msg.id  = 0x3c3;
-      msg.len = 8;
-      if (bms.getLowCellVolt() < settings.balanceVoltage)
-      {
-        msg.buf[0] = highByte(uint16_t(settings.balanceVoltage * 1000));
-        msg.buf[1] = lowByte(uint16_t(settings.balanceVoltage * 1000));
-      }
-      else
-      {
-        msg.buf[0] = highByte(uint16_t(bms.getLowCellVolt() * 1000));
-        msg.buf[1] = lowByte(uint16_t(bms.getLowCellVolt() * 1000));
-      }
-      msg.buf[2] =  0x01;
-      msg.buf[3] =  0x04;
-      msg.buf[4] =  0x03;
-      msg.buf[5] =  0x00;
-      msg.buf[6] =  0x00;
-      msg.buf[7] = 0x00;
-      Can0.write(msg);
-    }
+    bms.balanceCells();
+    //sendcommand();
   }
-
 }
 
 
@@ -2783,10 +2781,10 @@ void currentlimit()
     if (chargecurrent > 0)
     {
       //Temperature based///
-      if (bms.getHighTemperature() < settings.ChargeTSetpoint)
-      {
-        chargecurrent = chargecurrent - map(bms.getHighTemperature(), settings.UnderTSetpoint, settings.ChargeTSetpoint, settings.chargecurrentmax, 0);
-      }
+      // if (bms.getHighTemperature() < settings.ChargeTSetpoint)
+      // {
+      //   chargecurrent = chargecurrent - map(bms.getHighTemperature(), settings.UnderTSetpoint, settings.ChargeTSetpoint, settings.chargecurrentmax, 0);
+      // }
       //Voltagee based///
       if (storagemode == 1)
       {
