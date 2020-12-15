@@ -558,6 +558,12 @@ void loop()
     }
   }
 
+  if (millis() - loopTimeBalance > 200) {
+   balanceCan();
+    
+   loopTimeBalance = millis();
+  }
+
   if (millis() - looptime > 1000)
   {
     looptime = millis();
@@ -636,39 +642,8 @@ void loop()
     resetwdog();
   }
 
-  // if (millis() - loopTimeBalance > 200) {
-  //  balanceCan();
-    
-  //  loopTimeBalance = millis();
-  // }
 
-  if (millis() - cleartime > 5000)
-  {
-    /*
-      //bms.clearmodules(); // Not functional
-      if (bms.checkcomms())
-      {
-      //no missing modules
-      SERIALCONSOLE.println("  ");
-      SERIALCONSOLE.print(" ALL OK NO MODULE MISSING :) ");
-      SERIALCONSOLE.println("  ");
-      if (  bmsstatus == Error)
-      {
-        bmsstatus = Boot;
-      }
-      }
-      else
-      {
-      //missing module
-      SERIALCONSOLE.println("  ");
-      SERIALCONSOLE.print("   !!! MODULE MISSING !!!");
-      SERIALCONSOLE.println("  ");
-      //bmsstatus = Error;
-      ErrorReason = 4;
-      }
-    */
-    cleartime = millis();
-  }
+
   if (millis() - looptime1 > settings.chargerspd)
   {
     looptime1 = millis();
@@ -1432,10 +1407,18 @@ void balanceCan() // send CAN commands to balance cells
     bms.balanceCells();
     delay(10);
     sendcommand();
-    delay(200);
   }
 }
 
+void sendBlankBalance() {
+  msg.id  = 0x300;
+  msg.len = 8;
+  Can0.write(msg);
+
+  msg.id  = 0x310;
+  msg.len = 5;
+  Can0.write(msg);
+}
 
 void BMVmessage()//communication with the Victron Color Control System over VEdirect
 {
