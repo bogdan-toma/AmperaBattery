@@ -43,7 +43,7 @@ EEPROMSettings settings;
 
 
 /////Version Identifier/////////
-int firmver = 201206;
+int firmver = 201212;
 
 //Curent filter//
 float filterFrequency = 5.0 ;
@@ -215,7 +215,7 @@ void loadSettings()
   settings.IgnoreTemp = 0; // 0 - use both sensors, 1 or 2 only use that sensor
   settings.IgnoreVolt = 0.5;//
   settings.balanceVoltage = 4.0f;
-  settings.balanceHyst = 0.020f;
+  settings.balanceHyst = 0.030f;
   settings.logLevel = 2;
   settings.CAP = 30; //battery size in Ah
   settings.Pstrings = 2; // strings in parallel used to divide voltage of pack
@@ -238,8 +238,8 @@ void loadSettings()
   settings.convhigh = 61.5; // mV/A current sensor high range channel
   settings.convlow = 1000; // mV/A current sensor low range channel
   settings.changecur = 20000;//mA change overpoint
-  settings.offset1 = 1750; //mV mid point of channel 1
-  settings.offset2 = 1750;//mV mid point of channel 2
+  settings.offset1 = 1669; //mV mid point of channel 1
+  settings.offset2 = 2055;//mV mid point of channel 2
   settings.gaugelow = 50; //empty fuel gauge pwm
   settings.gaugehigh = 255; //full fuel gauge pwm
   settings.ESSmode = 0; //activate ESS mode
@@ -609,8 +609,8 @@ void loop()
     currentlimit();
 
     //VEcan();
-    balanceCan();
-    sendcommand(); // request voltage from Volt BICM
+    //balanceCan();
+    sendcommand(); // request BICM refresh
     if (cellspresent == 0 && SOCset == 1)
     {
       cellspresent = bms.seriescells();
@@ -637,9 +637,9 @@ void loop()
   }
 
   // if (millis() - loopTimeBalance > 200) {
-  //   balanceCan();
+  //  balanceCan();
     
-  //   loopTimeBalance = millis();
+  //  loopTimeBalance = millis();
   // }
 
   if (millis() - cleartime > 5000)
@@ -1430,7 +1430,9 @@ void balanceCan() // send CAN commands to balance cells
   if (balancecells == 1)
   {
     bms.balanceCells();
-    //sendcommand();
+    delay(10);
+    sendcommand();
+    delay(200);
   }
 }
 
