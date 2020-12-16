@@ -115,11 +115,7 @@ void BMSModuleManager::balanceCells()
       {
         if (getAvgCellVolt() < modules[y].getCellVoltage(i))
         {
-          if (y == 1 && i > 4) { // module #1 special treatment
-            balance = balance | (1 << (i-2)); // 6 cell internal module with a dummy #4 - bitshift less 1
-          } else {
-            balance = balance | (1 << (i-1)); // 8 cell internal module bitshift correctly
-          }
+          balance = balance | (1 << (i-1));
         }
       }
       if (y == 9) {
@@ -132,7 +128,6 @@ void BMSModuleManager::balanceCells()
   msg.id  = 0x300;
   msg.len = 8;
 
-  SERIALCONSOLE.println("    ");
   SERIALCONSOLE.print("   DEBUG Balance - ID:    ");
   SERIALCONSOLE.print(msg.id,HEX);
   SERIALCONSOLE.println("    ");
@@ -141,7 +136,6 @@ void BMSModuleManager::balanceCells()
   	SERIALCONSOLE.print(msg.buf[i],BIN);
     SERIALCONSOLE.println(' ');
   }
-  SERIALCONSOLE.println("    ");
 
   Can0.write(msg);
 
@@ -158,11 +152,7 @@ void BMSModuleManager::balanceCells()
       {
         if (getAvgCellVolt() < modules[y].getCellVoltage(i))
         {
-          if (y > 11 && i > 4) { // module #13 #14 #15 special treatment
-            balance = balance | (1 << (i-2)); // 6 cell internal module with a dummy #4 - bitshift less 1
-          } else {
-            balance = balance | (1 << (i-1)); // 8 cell internal module bitshift correctly
-          }
+          balance = balance | (1 << (i-1)); // 8 cell internal module bitshift correctly
         }
       }
       if (y > 11) { // hack for missing module #12
@@ -175,7 +165,6 @@ void BMSModuleManager::balanceCells()
   msg.id  = 0x310;
   msg.len = 5;
 
-  SERIALCONSOLE.println("    ");
   SERIALCONSOLE.print("   DEBUG Balance - ID:    ");
   SERIALCONSOLE.print(msg.id,HEX);
   SERIALCONSOLE.println("    ");
@@ -184,7 +173,6 @@ void BMSModuleManager::balanceCells()
   	SERIALCONSOLE.print(msg.buf[i],BIN);
     SERIALCONSOLE.println(' ');
   }
-  SERIALCONSOLE.println("    ");
 
   Can0.write(msg);
 }
@@ -457,8 +445,8 @@ void BMSModuleManager::printPackDetails(int digits, bool port)
           for (int i = 1; i < 12; i++)
           {
             if (cellNum < 10) SERIALCONSOLE.print(" ");
-            SERIALCONSOLE.print("  Cell");
-            SERIALCONSOLE.print(cellNum++);
+            SERIALCONSOLE.print("  Cell-");
+            SERIALCONSOLE.print(1 + cellNum++);
             SERIALCONSOLE.print(": ");
             SERIALCONSOLE.print(modules[y].getCellVoltage(i), digits);
             SERIALCONSOLE.print("V");
@@ -468,8 +456,8 @@ void BMSModuleManager::printPackDetails(int digits, bool port)
             for (int i = 13; i < modules[y].getCellsUsed() + 1; i++)
             {
               if (cellNum < 10) SERIALCONSOLE.print(" ");
-              SERIALCONSOLE.print("  Cell");
-              SERIALCONSOLE.print(cellNum++);
+              SERIALCONSOLE.print("  Cell-");
+              SERIALCONSOLE.print(1 + cellNum++);
               SERIALCONSOLE.print(": ");
               SERIALCONSOLE.print(modules[y].getCellVoltage(i), digits);
               SERIALCONSOLE.print("V");
@@ -480,8 +468,8 @@ void BMSModuleManager::printPackDetails(int digits, bool port)
             for (int i = 13; i < 24; i++)
             {
               if (cellNum < 10) SERIALCONSOLE.print(" ");
-              SERIALCONSOLE.print("  Cell");
-              SERIALCONSOLE.print(cellNum++);
+              SERIALCONSOLE.print("  Cell-");
+              SERIALCONSOLE.print(1 + cellNum++);
               SERIALCONSOLE.print(": ");
               SERIALCONSOLE.print(modules[y].getCellVoltage(i), digits);
               SERIALCONSOLE.print("V");
@@ -493,8 +481,8 @@ void BMSModuleManager::printPackDetails(int digits, bool port)
             for (int i = 25; i < modules[y].getCellsUsed() + 1; i++)
             {
               if (cellNum < 10) SERIALCONSOLE.print(" ");
-              SERIALCONSOLE.print("  Cell");
-              SERIALCONSOLE.print(cellNum++);
+              SERIALCONSOLE.print("  Cell-");
+              SERIALCONSOLE.print(1 + cellNum++);
               SERIALCONSOLE.print(": ");
               SERIALCONSOLE.print(modules[y].getCellVoltage(i), digits);
               SERIALCONSOLE.print("V");
@@ -506,8 +494,8 @@ void BMSModuleManager::printPackDetails(int digits, bool port)
           for (int i = 1; i < modules[y].getCellsUsed() + 1 ; i++)
           {
             if (cellNum < 10) SERIALCONSOLE.print(" ");
-            SERIALCONSOLE.print("  Cell");
-            SERIALCONSOLE.print(cellNum++);
+            SERIALCONSOLE.print("  Cell-");
+            SERIALCONSOLE.print(1 + cellNum++);
             SERIALCONSOLE.print(": ");
             SERIALCONSOLE.print(modules[y].getCellVoltage(i), digits);
             SERIALCONSOLE.print("V");
@@ -548,8 +536,8 @@ void BMSModuleManager::printPackDetails(int digits, bool port)
           for (int i = 1; i < 12; i++)
           {
             if (cellNum < 10) Serial2.print(" ");
-            Serial2.print("  Cell");
-            Serial2.print(cellNum++);
+            Serial2.print("  Cell-");
+            Serial2.print(1 + cellNum++);
             Serial2.print(": ");
             Serial2.print(modules[y].getCellVoltage(i), digits);
             Serial2.print("V");
@@ -559,8 +547,8 @@ void BMSModuleManager::printPackDetails(int digits, bool port)
             for (int i = 13; i < modules[y].getCellsUsed() + 1; i++)
             {
               if (cellNum < 10) Serial2.print(" ");
-              Serial2.print("  Cell");
-              Serial2.print(cellNum++);
+              Serial2.print("  Cell-");
+              Serial2.print(1 + cellNum++);
               Serial2.print(": ");
               Serial2.print(modules[y].getCellVoltage(i), digits);
               Serial2.print("V");
@@ -571,8 +559,8 @@ void BMSModuleManager::printPackDetails(int digits, bool port)
             for (int i = 13; i < 24; i++)
             {
               if (cellNum < 10) Serial2.print(" ");
-              Serial2.print("  Cell");
-              Serial2.print(cellNum++);
+              Serial2.print("  Cell-");
+              Serial2.print(1 + cellNum++);
               Serial2.print(": ");
               Serial2.print(modules[y].getCellVoltage(i), digits);
               Serial2.print("V");
@@ -584,8 +572,8 @@ void BMSModuleManager::printPackDetails(int digits, bool port)
             for (int i = 25; i < modules[y].getCellsUsed() + 1; i++)
             {
               if (cellNum < 10) Serial2.print(" ");
-              Serial2.print("  Cell");
-              Serial2.print(cellNum++);
+              Serial2.print("  Cell-");
+              Serial2.print(1 + cellNum++);
               Serial2.print(": ");
               Serial2.print(modules[y].getCellVoltage(i), digits);
               Serial2.print("V");
@@ -597,8 +585,8 @@ void BMSModuleManager::printPackDetails(int digits, bool port)
           for (int i = 1; i < modules[y].getCellsUsed() + 1 ; i++)
           {
             if (cellNum < 10) Serial2.print(" ");
-            Serial2.print("  Cell");
-            Serial2.print(cellNum++);
+            Serial2.print("  Cell-");
+            Serial2.print(1 + cellNum++);
             Serial2.print(": ");
             Serial2.print(modules[y].getCellVoltage(i), digits);
             Serial2.print("V");

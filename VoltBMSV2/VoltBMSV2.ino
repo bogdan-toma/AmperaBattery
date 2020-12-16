@@ -42,7 +42,7 @@ SerialConsole console;
 EEPROMSettings settings;
 
 /////Version Identifier/////////
-int firmver = 201225;
+int firmver = 201231;
 
 //Curent filter//
 float filterFrequency = 5.0;
@@ -178,7 +178,7 @@ int cellspresent = 0;
 int debug = 1;
 int inputcheck = 0;     //read digital inputs
 int outputcheck = 0;    //check outputs
-int candebug = 1;       //view can frames
+int candebug = 0;       //view can frames
 int CanDebugSerial = 0; //view can frames
 int gaugedebug = 0;
 int debugCur = 0;
@@ -209,7 +209,7 @@ void loadSettings()
   settings.IgnoreTemp = 0;   // 0 - use both sensors, 1 or 2 only use that sensor
   settings.IgnoreVolt = 0.5; //
   settings.balanceVoltage = 4.0f;
-  settings.balanceHyst = 0.030f;
+  settings.balanceHyst = 0.050f;
   settings.logLevel = 2;
   settings.CAP = 30;               //battery size in Ah
   settings.Pstrings = 2;           // strings in parallel used to divide voltage of pack
@@ -558,92 +558,88 @@ void loop()
     {
       sendBalanceCommands();
     }
+  }
+
+  // main loop 1000ms
+  if (loopTimeMain - looptime >= 1000) // process sequence 1sec
+  {
+    looptime = loopTimeMain; // reset loop time
+    bms.getAllVoltTemp();
+
+    //UV  check
+    if (settings.ESSmode == 1)
+    {
+    }
+    else //In 'vehicle' mode
+    {
+      if (bms.getLowCellVolt() < settings.UnderVSetpoint || bms.getHighCellVolt() < settings.UnderVSetpoint)
+      {
+        if (UnderTime > millis()) //check is last time not undervoltage is longer thatn UnderDur ago
+        {
+          bmsstatus = Error;
+          ErrorReason = 2;
+        }
+      }
+      else
+      {
+        UnderTime = millis() + settings.UnderDur;
+      }
+    }
+
+    if (debug != 0)
+    {
+      printbmsstat();
+      bms.printPackDetails(debugdigits, 0);
+    }
+    if (CSVdebug != 0)
+    {
+      bms.printAllCSV(millis(), currentact, SOC);
+    }
+    if (inputcheck != 0)
+    {
+      inputdebug();
+    }
+
+    if (outputcheck != 0)
+    {
+      outputdebug();
+    }
     else
     {
-      requestBICMdata();
+      gaugeupdate();
     }
 
-    // main loop 1000ms
-    if (loopTimeMain - looptime >= 1000) // process sequence 1sec
+    updateSOC();
+    currentlimit();
+
+    // VEcan();
+
+    //if (!balancecells)
+    requestBICMdata(); // request data here only if not balancing.
+
+    if (cellspresent == 0 && SOCset == 1)
     {
-      looptime = loopTimeMain; // reset loop time
-      bms.getAllVoltTemp();
-
-      //UV  check
-      if (settings.ESSmode == 1)
-      {
-      }
-      else //In 'vehicle' mode
-      {
-        if (bms.getLowCellVolt() < settings.UnderVSetpoint || bms.getHighCellVolt() < settings.UnderVSetpoint)
-        {
-          if (UnderTime > millis()) //check is last time not undervoltage is longer thatn UnderDur ago
-          {
-            bmsstatus = Error;
-            ErrorReason = 2;
-          }
-        }
-        else
-        {
-          UnderTime = millis() + settings.UnderDur;
-        }
-      }
-
-      if (debug != 0)
-      {
-        printbmsstat();
-        bms.printPackDetails(debugdigits, 0);
-      }
-      if (CSVdebug != 0)
-      {
-        bms.printAllCSV(millis(), currentact, SOC);
-      }
-      if (inputcheck != 0)
-      {
-        inputdebug();
-      }
-
-      if (outputcheck != 0)
-      {
-        outputdebug();
-      }
-      else
-      {
-        gaugeupdate();
-      }
-
-      updateSOC();
-      currentlimit();
-
-      // VEcan();
-
-      if (!balancecells)
-        requestBICMdata(); // request data here only if not balancing.
-
-      if (cellspresent == 0 && SOCset == 1)
-      {
-        cellspresent = bms.seriescells();
-        bms.setSensors(settings.IgnoreTemp, settings.IgnoreVolt);
-      }
-      else
-      {
-        if (cellspresent != bms.seriescells() || cellspresent != (settings.Scells * settings.Pstrings)) //detect a fault in cells detected
-        {
-          SERIALCONSOLE.println("  ");
-          SERIALCONSOLE.print("   !!! Series Cells Fault !!!");
-          SERIALCONSOLE.println("  ");
-          bmsstatus = Error;
-          ErrorReason = 3;
-        }
-      }
-      alarmupdate();
-      if (CSVdebug != 1)
-      {
-        dashupdate();
-      }
-
-      resetwdog();
+      cellspresent = bms.seriescells();
+      bms.setSensors(settings.IgnoreTemp, settings.IgnoreVolt);
     }
+    else
+    {
+      if (cellspresent != bms.seriescells() || cellspresent != (settings.Scells * settings.Pstrings)) //detect a fault in cells detected
+      {
+        SERIALCONSOLE.println("  ");
+        SERIALCONSOLE.print("   !!! Series Cells Fault !!!");
+        SERIALCONSOLE.println("  ");
+        bmsstatus = Error;
+        ErrorReason = 3;
+      }
+    }
+    alarmupdate();
+    if (CSVdebug != 1)
+    {
+      dashupdate();
+    }
+
+    resetwdog();
   }
 
   if (loopTimeMain - looptime1 > settings.chargerspd)
@@ -662,7 +658,6 @@ void loop()
       {
         chargercomms(0x01);
       }
-      //CanSerial();
     }
   }
 }
@@ -1397,6 +1392,13 @@ void sendBalanceCommands() // send CAN commands to balance cells
   {
     bms.balanceCells();
     sendcommand();
+    delay(100);
+
+    // clear canbus and wait for next iteration
+    while (Can0.available())
+    {
+      Can0.read(inMsg);
+    }
   }
 }
 

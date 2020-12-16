@@ -111,15 +111,15 @@ void BMSModule::decodecan(int Id, CAN_message_t &msg)
       case 0x70:
         if ((((msg.buf[0] & 0x7F)  << 8)   + msg.buf[1]) > 0)
         {
-          cellVolt[5] = float((((msg.buf[0] & 0x7F) << 8)  + msg.buf[1]) * 0.00125);
+          cellVolt[4] = float((((msg.buf[0] & 0x7F) << 8)  + msg.buf[1]) * 0.00125);
         }
         if (((msg.buf[2]  << 8)   + msg.buf[3]) > 0)
         {
-          cellVolt[6] = float(((msg.buf[2] << 8)  + msg.buf[3]) * 0.00125);
+          cellVolt[5] = float(((msg.buf[2] << 8)  + msg.buf[3]) * 0.00125);
         }
         if (((msg.buf[4]  << 8)   + msg.buf[5]) > 0)
         {
-          cellVolt[7] = float(((msg.buf[4] << 8)  + msg.buf[5]) * 0.00125);
+          cellVolt[6] = float(((msg.buf[4] << 8)  + msg.buf[5]) * 0.00125);
         }
         break;
 
