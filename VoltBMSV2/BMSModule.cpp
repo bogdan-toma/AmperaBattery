@@ -39,7 +39,7 @@ void BMSModule::clearmodule()
 
 void BMSModule::decodecan(int Id, CAN_message_t &msg)
 {
-  if (moduleAddress < 0xC)
+  if (0x1 < moduleAddress && moduleAddress < 0xC)
   {
     switch (Id)
     {

@@ -106,54 +106,86 @@ void BMSModuleManager::balanceCells()
   {
     msg.buf[c] = 0;
   }
-  for (int y = 1; y < 9; y++)
+  for (int y = 1; y <= 9; y++)
   {
     if (modules[y].isExisting() == 1)
     {
       int balance = 0;
       for (int i = 1; i < 9; i++)
       {
-
-        if (getLowCellVolt() < modules[y].getCellVoltage(i))
+        if (getAvgCellVolt() < modules[y].getCellVoltage(i))
         {
-          balance = balance | (1 << i);
+          if (y == 1 && i > 4) { // module #1 special treatment
+            balance = balance | (1 << (i-2)); // 6 cell internal module with a dummy #4 - bitshift less 1
+          } else {
+            balance = balance | (1 << (i-1)); // 8 cell internal module bitshift correctly
+          }
         }
       }
-      msg.buf[y - 1] = balance;
+      if (y == 9) {
+        msg.buf[y - 2] = balance; // hack for missing module #8
+      } else {
+        msg.buf[y - 1] = balance;
+      }
     }
   }
   msg.id  = 0x300;
   msg.len = 8;
+
+  SERIALCONSOLE.println("    ");
+  SERIALCONSOLE.print("   DEBUG Balance - ID:    ");
+  SERIALCONSOLE.print(msg.id,HEX);
+  SERIALCONSOLE.println("    ");
+  for (byte i = 0; i < msg.len; i++) {
+    SERIALCONSOLE.print("    pos: "); Serial.print(i); Serial.print("  -  ");
+  	SERIALCONSOLE.print(msg.buf[i],BIN);
+    SERIALCONSOLE.println(' ');
+  }
+  SERIALCONSOLE.println("    ");
+
   Can0.write(msg);
 
   for (int c = 0; c < 8; c++)
   {
     msg.buf[c] = 0;
   }
-  for (int y = 1; y < 9; y++)
+  for (int y = 10; y <= 15; y++)
   {
     if (modules[y].isExisting() == 1)
     {
       int balance = 0;
       for (int i = 1; i < 9; i++)
       {
-        if (getLowCellVolt() < modules[y].getCellVoltage(i))
+        if (getAvgCellVolt() < modules[y].getCellVoltage(i))
         {
-          if (y < 11 || i < 4)
-          {
-            balance = balance | (1 << i);
-          }
-          else
-          {
-            balance = balance | (1 << (i + 1));
+          if (y > 11 && i > 4) { // module #13 #14 #15 special treatment
+            balance = balance | (1 << (i-2)); // 6 cell internal module with a dummy #4 - bitshift less 1
+          } else {
+            balance = balance | (1 << (i-1)); // 8 cell internal module bitshift correctly
           }
         }
       }
-      msg.buf[y - 8] = balance;
+      if (y > 11) { // hack for missing module #12
+        msg.buf[y - 11] = balance;
+      } else {
+        msg.buf[y - 10] = balance;
+      }
     }
   }
   msg.id  = 0x310;
   msg.len = 5;
+
+  SERIALCONSOLE.println("    ");
+  SERIALCONSOLE.print("   DEBUG Balance - ID:    ");
+  SERIALCONSOLE.print(msg.id,HEX);
+  SERIALCONSOLE.println("    ");
+  for (byte i = 0; i < msg.len; i++) {
+    SERIALCONSOLE.print("    pos: "); Serial.print(i); Serial.print("  -  ");
+  	SERIALCONSOLE.print(msg.buf[i],BIN);
+    SERIALCONSOLE.println(' ');
+  }
+  SERIALCONSOLE.println("    ");
+
   Can0.write(msg);
 }
 
