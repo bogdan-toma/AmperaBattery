@@ -191,7 +191,7 @@ float BMSModule::getHighCellV()
 {
   float hiVal = 0.0f;
   for (int i = 0; i < 32; i++)
-    if (cellVolt[i] > IgnoreCell && cellVolt[i] < 5.0)
+    if (cellVolt[i] > IgnoreCell && cellVolt[i] < 60.0)
     {
       if (cellVolt[i] > hiVal) hiVal = cellVolt[i];
     }
