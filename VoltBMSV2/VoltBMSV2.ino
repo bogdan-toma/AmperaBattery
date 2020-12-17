@@ -42,7 +42,7 @@ SerialConsole console;
 EEPROMSettings settings;
 
 /////Version Identifier/////////
-int firmver = 201231;
+int firmver = 201232;
 
 //Curent filter//
 float filterFrequency = 5.0;
@@ -184,7 +184,7 @@ int gaugedebug = 0;
 int debugCur = 0;
 int CSVdebug = 0;
 int menuload = 0;
-int debugdigits = 4; //amount of digits behind decimal for voltage reading
+int debugdigits = 3; //amount of digits behind decimal for voltage reading
 
 ADC *adc = new ADC(); // adc object
 void loadSettings()
@@ -554,92 +554,94 @@ void loop()
   {
     loopTimeBalance = loopTimeMain; // reset loop time
 
-    if (loopTimeMain > 15000) // delay balancing
+    // main loop 1000ms
+    if (loopTimeMain - looptime >= 1000) // process sequence 1sec
     {
-      sendBalanceCommands();
-    }
-  }
+      looptime = loopTimeMain; // reset loop time
+      bms.getAllVoltTemp();
 
-  // main loop 1000ms
-  if (loopTimeMain - looptime >= 1000) // process sequence 1sec
-  {
-    looptime = loopTimeMain; // reset loop time
-    bms.getAllVoltTemp();
-
-    //UV  check
-    if (settings.ESSmode == 1)
-    {
-    }
-    else //In 'vehicle' mode
-    {
-      if (bms.getLowCellVolt() < settings.UnderVSetpoint || bms.getHighCellVolt() < settings.UnderVSetpoint)
+      //UV  check
+      if (settings.ESSmode == 1)
       {
-        if (UnderTime > millis()) //check is last time not undervoltage is longer thatn UnderDur ago
+      }
+      else //In 'vehicle' mode
+      {
+        if (bms.getLowCellVolt() < settings.UnderVSetpoint || bms.getHighCellVolt() < settings.UnderVSetpoint)
         {
-          bmsstatus = Error;
-          ErrorReason = 2;
+          if (UnderTime > millis()) //check is last time not undervoltage is longer thatn UnderDur ago
+          {
+            bmsstatus = Error;
+            ErrorReason = 2;
+          }
         }
+        else
+        {
+          UnderTime = millis() + settings.UnderDur;
+        }
+      }
+
+      if (debug != 0)
+      {
+        printbmsstat();
+        bms.printPackDetails(debugdigits, 0);
+      }
+      if (CSVdebug != 0)
+      {
+        bms.printAllCSV(millis(), currentact, SOC);
+      }
+      if (inputcheck != 0)
+      {
+        inputdebug();
+      }
+
+      if (outputcheck != 0)
+      {
+        outputdebug();
       }
       else
       {
-        UnderTime = millis() + settings.UnderDur;
+        gaugeupdate();
       }
-    }
 
-    if (debug != 0)
-    {
-      printbmsstat();
-      bms.printPackDetails(debugdigits, 0);
-    }
-    if (CSVdebug != 0)
-    {
-      bms.printAllCSV(millis(), currentact, SOC);
-    }
-    if (inputcheck != 0)
-    {
-      inputdebug();
-    }
+      updateSOC();
+      currentlimit();
 
-    if (outputcheck != 0)
-    {
-      outputdebug();
-    }
-    else
-    {
-      gaugeupdate();
-    }
+      // VEcan();
 
-    updateSOC();
-    currentlimit();
+      //if (!balancecells)
+      requestBICMdata(); // request data here only if not balancing.
 
-    // VEcan();
-
-    //if (!balancecells)
-    requestBICMdata(); // request data here only if not balancing.
-
-    if (cellspresent == 0 && SOCset == 1)
-    {
-      cellspresent = bms.seriescells();
-      bms.setSensors(settings.IgnoreTemp, settings.IgnoreVolt);
-    }
-    else
-    {
-      if (cellspresent != bms.seriescells() || cellspresent != (settings.Scells * settings.Pstrings)) //detect a fault in cells detected
+      if (cellspresent == 0 && SOCset == 1)
       {
-        SERIALCONSOLE.println("  ");
-        SERIALCONSOLE.print("   !!! Series Cells Fault !!!");
-        SERIALCONSOLE.println("  ");
-        bmsstatus = Error;
-        ErrorReason = 3;
+        cellspresent = bms.seriescells();
+        bms.setSensors(settings.IgnoreTemp, settings.IgnoreVolt);
+      }
+      else
+      {
+        if (cellspresent != bms.seriescells() || cellspresent != (settings.Scells * settings.Pstrings)) //detect a fault in cells detected
+        {
+          SERIALCONSOLE.println("  ");
+          SERIALCONSOLE.print("   !!! Series Cells Fault !!!");
+          SERIALCONSOLE.println("  ");
+          bmsstatus = Error;
+          ErrorReason = 3;
+        }
+      }
+      alarmupdate();
+      if (CSVdebug != 1)
+      {
+        dashupdate();
+      }
+
+      resetwdog();
+    }
+    else
+    {
+      if (loopTimeMain > 15000) // delay balancing
+      {
+        sendBalanceCommands();
       }
     }
-    alarmupdate();
-    if (CSVdebug != 1)
-    {
-      dashupdate();
-    }
-
-    resetwdog();
   }
 
   if (loopTimeMain - looptime1 > settings.chargerspd)
@@ -650,13 +652,20 @@ void loop()
     }
     else
     {
-      if (bmsstatus == Charge)
+      if (settings.SerialCan == 1)
       {
-        chargercomms(0x00);
+        CanSerial();
       }
-      else
+      else // run 125kbps Charger (TCCH)
       {
-        chargercomms(0x01);
+        if (bmsstatus == Charge)
+        {
+          chargercomms(0x00);
+        }
+        else
+        {
+          chargercomms(0x01);
+        }
       }
     }
   }
@@ -1392,29 +1401,32 @@ void sendBalanceCommands() // send CAN commands to balance cells
   {
     bms.balanceCells();
     sendcommand();
-    delay(100);
+    //delay(50);
 
     // clear canbus and wait for next iteration
-    while (Can0.available())
-    {
-      Can0.read(inMsg);
-    }
+    // while (Can0.available())
+    // {
+    //   Can0.read(inMsg);
+    // }
   }
 }
 
 void requestBICMdata()
 {
-  // for (int c = 0; c < 8; c++)
-  // {
-  //   msg.buf[c] = 0;
-  // }
-  // msg.id  = 0x300;
-  // msg.len = 8;
-  // Can0.write(msg);
-
-  // msg.id  = 0x310;
-  // msg.len = 5;
-  // Can0.write(msg);
+  for (int c = 0; c < 8; c++)
+  {
+    msg.buf[c] = 0;
+  }
+  msg.id = 0x300;
+  msg.len = 8;
+  Can0.write(msg);
+  for (int c = 0; c < 8; c++)
+  {
+    msg.buf[c] = 0;
+  }
+  msg.id = 0x310;
+  msg.len = 5;
+  Can0.write(msg);
 
   sendcommand();
 }

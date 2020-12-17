@@ -61,4 +61,5 @@ class BMSModule
     int scells;
     int balstat;
     int cellsused;
+    float decodeCellVoltage(int cell, CAN_message_t &msg, int msb, int lsb);
 };
