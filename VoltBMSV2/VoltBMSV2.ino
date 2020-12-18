@@ -42,7 +42,7 @@ SerialConsole console;
 EEPROMSettings settings;
 
 /////Version Identifier/////////
-int firmver = 201232;
+int firmver = 201235;
 
 //Curent filter//
 float filterFrequency = 5.0;
@@ -225,7 +225,7 @@ void loadSettings()
   settings.socvolt[3] = 90;        //Voltage and SOC curve for voltage based SOC calc
   settings.invertcur = 1;          //Invert current sensor direction
   settings.cursens = 1;
-  settings.voltsoc = 1;          //SOC purely voltage based
+  settings.voltsoc = 0;          //SOC purely voltage based
   settings.Pretime = 5000;       //ms of precharge time
   settings.conthold = 50;        //holding duty cycle for contactor 0-255
   settings.Precurrent = 1000;    //ma before closing main contator
@@ -239,7 +239,7 @@ void loadSettings()
   settings.ESSmode = 0;          //activate ESS mode
   settings.ncur = 1;             //number of multiples to use for current measurement
   settings.chargertype = 4;      // 1 - Brusa NLG5xx 2 - Volt charger 0 -No Charger
-  settings.chargerspd = 100;     //ms per message
+  settings.chargerspd = 1000;    //ms per message
   settings.UnderDur = 5000;      //ms of allowed undervoltage before throwing open stopping discharge.
   settings.CurDead = 5;          // mV of dead band on current sensor
   settings.ChargerDirect = 0;    //1 - charger is always connected to HV battery // 0 - Charger is behind the contactors
@@ -545,7 +545,10 @@ void loop()
 
     if (settings.cursens == Analoguedual || settings.cursens == Analoguesing)
     {
-      getcurrent();
+      if (bmsstatus != Ready)
+        getcurrent();
+      else 
+        currentact = 0;
     }
   }
 
@@ -608,8 +611,8 @@ void loop()
 
       // VEcan();
 
-      //if (!balancecells)
-      requestBICMdata(); // request data here only if not balancing.
+      if (!balancecells)
+        requestBICMdata(); // request data here only if not balancing.
 
       if (cellspresent == 0 && SOCset == 1)
       {
@@ -637,7 +640,7 @@ void loop()
     }
     else
     {
-      if (loopTimeMain > 15000) // delay balancing
+      if (balancecells && loopTimeMain > 15000) // delay balancing
       {
         sendBalanceCommands();
       }
@@ -861,7 +864,7 @@ void getcurrent()
   {
     if (settings.cursens == Analoguedual)
     {
-      if (currentact < settings.changecur && currentact > (settings.changecur * -1))
+      if (abs(currentact) < settings.changecur)
       {
         sensor = 1;
         adc->adc0->startContinuous(ACUR1);
@@ -973,7 +976,7 @@ void getcurrent()
   {
     if (sensor == 1)
     {
-      if (currentact > 500 || currentact < -500)
+      if (abs(currentact) > 500 )
       {
         ampsecond = ampsecond + ((currentact * (millis() - lasttime) / 1000) / 1000);
         lasttime = millis();
@@ -985,7 +988,7 @@ void getcurrent()
     }
     if (sensor == 2)
     {
-      if (currentact > settings.changecur || currentact < (settings.changecur * -1))
+      if (abs(currentact) > settings.changecur)
       {
         ampsecond = ampsecond + ((currentact * (millis() - lasttime) / 1000) / 1000);
         lasttime = millis();
@@ -998,7 +1001,7 @@ void getcurrent()
   }
   else
   {
-    if (currentact > 500 || currentact < -500)
+    if (abs(currentact) > 500)
     {
       ampsecond = ampsecond + ((currentact * (millis() - lasttime) / 1000) / 1000);
       lasttime = millis();
@@ -1142,7 +1145,7 @@ void Prechargecon()
   {
     digitalWrite(OUT4, HIGH); //Negative Contactor Close
     contctrl = 2;
-    if (Pretimer + settings.Pretime > millis() || currentact > settings.Precurrent)
+    if (Pretimer + settings.Pretime > millis() || abs(currentact) > settings.Precurrent)
     {
       digitalWrite(OUT2, HIGH); //precharge
     }
@@ -1397,18 +1400,15 @@ void VEcan() //communication with Victron system over CAN
 
 void sendBalanceCommands() // send CAN commands to balance cells
 {
-  if (balancecells)
-  {
-    bms.balanceCells();
-    sendcommand();
-    //delay(50);
+  bms.balanceCells();
+  sendcommand();
+  //delay(50);
 
-    // clear canbus and wait for next iteration
-    // while (Can0.available())
-    // {
-    //   Can0.read(inMsg);
-    // }
-  }
+  // clear canbus and wait for next iteration
+  // while (Can0.available())
+  // {
+  //   Can0.read(inMsg);
+  // }
 }
 
 void requestBICMdata()
@@ -2920,106 +2920,53 @@ void pwmcomms()
   */
 }
 
+void dashEndCommand() {
+  Serial2.write(0xff); // We always have to send this three lines after each command sent to the nextion display.
+  Serial2.write(0xff);
+  Serial2.write(0xff);
+}
+
 void dashupdate()
 {
-  Serial2.write("stat.txt=");
-  Serial2.write(0x22);
-  if (settings.ESSmode == 1)
-  {
-  }
-  else
-  {
-    switch (bmsstatus)
-    {
-    case (Boot):
-      Serial2.print(" Boot ");
-      break;
-
-    case (Ready):
-      Serial2.print(" Ready ");
-      break;
-
-    case (Precharge):
-      Serial2.print(" Precharge ");
-      break;
-
-    case (Drive):
-      Serial2.print(" Drive ");
-      break;
-
-    case (Charge):
-      Serial2.print(" Charge ");
-      break;
-
-    case (Error):
-      Serial2.print(" Error ");
-      break;
-    }
-  }
-  Serial2.write(0x22);
-  Serial2.write(0xff); // We always have to send this three lines after each command sent to the nextion display.
-  Serial2.write(0xff);
-  Serial2.write(0xff);
+  Serial2.write("bmsstat.val=");
+  Serial2.print(bmsstatus);
+  dashEndCommand();
   Serial2.print("soc.val=");
   Serial2.print(SOC);
-  Serial2.write(0xff); // We always have to send this three lines after each command sent to the nextion display.
-  Serial2.write(0xff);
-  Serial2.write(0xff);
+  dashEndCommand();
   Serial2.print("soc1.val=");
   Serial2.print(SOC);
-  Serial2.write(0xff); // We always have to send this three lines after each command sent to the nextion display.
-  Serial2.write(0xff);
-  Serial2.write(0xff);
+  dashEndCommand();
   Serial2.print("current.val=");
   Serial2.print(currentact / 100, 0);
-  Serial2.write(0xff); // We always have to send this three lines after each command sent to the nextion display.
-  Serial2.write(0xff);
-  Serial2.write(0xff);
+  dashEndCommand();
   Serial2.print("temp.val=");
   Serial2.print(bms.getAvgTemperature(), 0);
-  Serial2.write(0xff); // We always have to send this three lines after each command sent to the nextion display.
-  Serial2.write(0xff);
-  Serial2.write(0xff);
+  dashEndCommand();
   Serial2.print("templow.val=");
   Serial2.print(bms.getLowTemperature(), 0);
-  Serial2.write(0xff); // We always have to send this three lines after each command sent to the nextion display.
-  Serial2.write(0xff);
-  Serial2.write(0xff);
+  dashEndCommand();
   Serial2.print("temphigh.val=");
   Serial2.print(bms.getHighTemperature(), 0);
-  Serial2.write(0xff); // We always have to send this three lines after each command sent to the nextion display.
-  Serial2.write(0xff);
-  Serial2.write(0xff);
+  dashEndCommand();
   Serial2.print("volt.val=");
   Serial2.print(bms.getPackVoltage() * 10, 0);
-  Serial2.write(0xff); // We always have to send this three lines after each command sent to the nextion display.
-  Serial2.write(0xff);
-  Serial2.write(0xff);
+  dashEndCommand();
   Serial2.print("lowcell.val=");
   Serial2.print(bms.getLowCellVolt() * 1000, 0);
-  Serial2.write(0xff); // We always have to send this three lines after each command sent to the nextion display.
-  Serial2.write(0xff);
-  Serial2.write(0xff);
+  dashEndCommand();
   Serial2.print("highcell.val=");
   Serial2.print(bms.getHighCellVolt() * 1000, 0);
-  Serial2.write(0xff); // We always have to send this three lines after each command sent to the nextion display.
-  Serial2.write(0xff);
-  Serial2.write(0xff);
+  dashEndCommand();
   Serial2.print("celldelta.val=");
   Serial2.print(bms.getHighCellVolt() * 1000 - bms.getLowCellVolt() * 1000, 0);
-  Serial2.write(0xff); // We always have to send this three lines after each command sent to the nextion display.
-  Serial2.write(0xff);
-  Serial2.write(0xff);
+  dashEndCommand();
   Serial2.print("cellbal.val=");
   Serial2.print(balancecells ? 1 : 0);
-  Serial2.write(0xff); // We always have to send this three lines after each command sent to the nextion display.
-  Serial2.write(0xff);
-  Serial2.write(0xff);
+  dashEndCommand();
   Serial2.print("firm.val=");
   Serial2.print(firmver);
-  Serial2.write(0xff); // We always have to send this three lines after each command sent to the nextion display.
-  Serial2.write(0xff);
-  Serial2.write(0xff);
+  dashEndCommand();
 }
 
 void chargercomms(byte contCh)
