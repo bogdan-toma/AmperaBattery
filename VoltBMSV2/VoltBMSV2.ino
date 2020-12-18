@@ -2928,13 +2928,10 @@ void dashEndCommand() {
 
 void dashupdate()
 {
-  Serial2.write("bmsstat.val=");
+  Serial2.write("page0.bmsstat.val=");
   Serial2.print(bmsstatus);
   dashEndCommand();
   Serial2.print("soc.val=");
-  Serial2.print(SOC);
-  dashEndCommand();
-  Serial2.print("soc1.val=");
   Serial2.print(SOC);
   dashEndCommand();
   Serial2.print("current.val=");
