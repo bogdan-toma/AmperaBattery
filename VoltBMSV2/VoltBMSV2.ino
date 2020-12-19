@@ -42,7 +42,7 @@ SerialConsole console;
 EEPROMSettings settings;
 
 /////Version Identifier/////////
-int firmver = 201235;
+int firmver = 201237;
 
 //Curent filter//
 float filterFrequency = 5.0;
@@ -395,6 +395,8 @@ void loop()
     SerialCanRecieve();
   }
 
+  dashDisplayListen(); // listen for info on NextionDisplay
+
   // MAIN STATE MACHINE
   if (outputcheck != 1)
   {
@@ -547,7 +549,7 @@ void loop()
     {
       if (bmsstatus != Ready)
         getcurrent();
-      else 
+      else
         currentact = 0;
     }
   }
@@ -976,7 +978,7 @@ void getcurrent()
   {
     if (sensor == 1)
     {
-      if (abs(currentact) > 500 )
+      if (abs(currentact) > 500)
       {
         ampsecond = ampsecond + ((currentact * (millis() - lasttime) / 1000) / 1000);
         lasttime = millis();
@@ -2920,7 +2922,54 @@ void pwmcomms()
   */
 }
 
-void dashEndCommand() {
+void dashDisplayListen() // simple protocol from https://seithan.com/nextion-projects/send-values-store-them-on-arduino/
+{
+  if (Serial2.available() > 2)
+  {                                   // Read if more then 2 bytes come (we always send more than 2 <#> <len> <cmd> <id>
+    char start_char = Serial2.read(); // Create a local variable (start_char) read and store the first byte on it
+    if (start_char == '#')
+    {                               // And when we find the character #
+      uint8_t len = Serial2.read(); // Create local variable (len) / read and store the value of the second byte
+                                    // <len> is the lenght (number of bytes following)
+      unsigned long tmr_1 = millis();
+      boolean cmd_found = true;
+
+      while (Serial2.available() < len)
+      { // Waiting for all the bytes that we declare with <len> to arrive
+        if ((millis() - tmr_1) > 100)
+        {                    // Waiting... But not forever......
+          cmd_found = false; // tmr_1 a timer to avoid the stack in the while loop if there is not any bytes on Serial
+          break;
+        }
+        delay(1); // Delay for nothing delete it if you want
+      }
+
+      if (cmd_found == true)
+      {                               // So..., A command is found (bytes in Serial buffer egual more than len)
+        uint8_t cmd = Serial2.read(); // Create local variable (cmd). Read and store the next byte. This is the command group
+
+        switch (cmd)
+        {
+        case 0x01: // command to change charge amps
+          if (Serial2.read() == 0x00)
+            settings.chargecurrentmax -= 10;
+          else
+            settings.chargecurrentmax += 10;
+          // Should we store this to EEPROM? probably overkill
+
+          Serial2.print("champ.val=");
+          Serial2.print(settings.chargecurrentmax);
+          dashEndCommand();
+
+          break;
+        }
+      }
+    }
+  }
+}
+
+void dashEndCommand()
+{
   Serial2.write(0xff); // We always have to send this three lines after each command sent to the nextion display.
   Serial2.write(0xff);
   Serial2.write(0xff);
@@ -2963,6 +3012,9 @@ void dashupdate()
   dashEndCommand();
   Serial2.print("firm.val=");
   Serial2.print(firmver);
+  dashEndCommand();
+  Serial2.print("champ.val=");
+  Serial2.print(settings.chargecurrentmax);
   dashEndCommand();
 }
 
