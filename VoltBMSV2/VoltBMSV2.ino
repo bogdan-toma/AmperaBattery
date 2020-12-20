@@ -42,7 +42,7 @@ SerialConsole console;
 EEPROMSettings settings;
 
 /////Version Identifier/////////
-int firmver = 201237;
+int firmver = 201239;
 
 //Curent filter//
 float filterFrequency = 5.0;
@@ -175,7 +175,7 @@ bool balancecells = false;
 int cellspresent = 0;
 
 //Debugging modes//////////////////
-int debug = 1;
+int debug = 0;
 int inputcheck = 0;     //read digital inputs
 int outputcheck = 0;    //check outputs
 int candebug = 0;       //view can frames
@@ -547,10 +547,10 @@ void loop()
 
     if (settings.cursens == Analoguedual || settings.cursens == Analoguesing)
     {
-      if (bmsstatus != Ready)
-        getcurrent();
-      else
+      if (bmsstatus == Ready)
         currentact = 0;
+      else
+        getcurrent();
     }
   }
 
