@@ -2970,11 +2970,17 @@ void dashDisplayListen() // simple protocol from https://seithan.com/nextion-pro
           break;
         case 0x02: // command to change max charge %
           if (Serial2.read() == 0x00)
+          {
             maxchargepercent--;
+          }
           else
+          {
             maxchargepercent++;
             if (maxchargepercent > 100)
+            {
               maxchargepercent = 100;
+            }
+          }
 
           Serial2.print("maxch.val=");
           Serial2.print(maxchargepercent);
