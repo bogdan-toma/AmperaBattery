@@ -230,8 +230,8 @@ void loadSettings()
   settings.Pretime = 5000;       //ms of precharge time
   settings.conthold = 50;        //holding duty cycle for contactor 0-255
   settings.Precurrent = 1000;    //ma before closing main contator
-  settings.convhigh = 615;      // mV/A current sensor high range channel
-  settings.convlow = 10000;       // mV/A current sensor low range channel
+  settings.convhigh = 615;       // mV/A current sensor high range channel
+  settings.convlow = 10000;      // mV/A current sensor low range channel
   settings.changecur = 20000;    //mA change overpoint
   settings.offset1 = 1669;       //mV mid point of channel 1
   settings.offset2 = 2055;       //mV mid point of channel 2
@@ -408,8 +408,7 @@ void loop()
       {
         contctrl = contctrl | 4; //turn on negative contactor
 
-
-        if (digitalRead(IN1) == LOW)//Key OFF
+        if (digitalRead(IN1) == LOW) //Key OFF
         {
           if (storagemode == 1)
           {
@@ -438,7 +437,7 @@ void loop()
         {
           if (bms.getHighCellVolt() > settings.StoreVsetpoint)
           {
-            digitalWrite(OUT3, LOW);//turn off charger
+            digitalWrite(OUT3, LOW); //turn off charger
             contctrl = contctrl & 253;
             Pretimer = millis();
             Charged = 1;
@@ -451,7 +450,7 @@ void loop()
               if (bms.getHighCellVolt() < (settings.StoreVsetpoint - settings.ChargeHys))
               {
                 Charged = 0;
-                digitalWrite(OUT3, HIGH);//turn on charger
+                digitalWrite(OUT3, HIGH); //turn on charger
                 if (Pretimer + settings.Pretime < millis())
                 {
                   contctrl = contctrl | 2;
@@ -461,7 +460,7 @@ void loop()
             }
             else
             {
-              digitalWrite(OUT3, HIGH);//turn on charger
+              digitalWrite(OUT3, HIGH); //turn on charger
               if (Pretimer + settings.Pretime < millis())
               {
                 contctrl = contctrl | 2;
@@ -474,7 +473,7 @@ void loop()
         {
           if (bms.getHighCellVolt() > settings.OverVSetpoint || bms.getHighCellVolt() > settings.ChargeVsetpoint)
           {
-            digitalWrite(OUT3, LOW);//turn off charger
+            digitalWrite(OUT3, LOW); //turn off charger
             contctrl = contctrl & 253;
             Pretimer = millis();
             Charged = 1;
@@ -487,7 +486,7 @@ void loop()
               if (bms.getHighCellVolt() < (settings.ChargeVsetpoint - settings.ChargeHys))
               {
                 Charged = 0;
-                digitalWrite(OUT3, HIGH);//turn on charger
+                digitalWrite(OUT3, HIGH); //turn on charger
                 if (Pretimer + settings.Pretime < millis())
                 {
                   // Serial.println();
@@ -498,7 +497,7 @@ void loop()
             }
             else
             {
-              digitalWrite(OUT3, HIGH);//turn on charger
+              digitalWrite(OUT3, HIGH); //turn on charger
               if (Pretimer + settings.Pretime < millis())
               {
                 // Serial.println();
@@ -510,29 +509,28 @@ void loop()
         }
         if (bms.getLowCellVolt() < settings.UnderVSetpoint || bms.getLowCellVolt() < settings.DischVsetpoint)
         {
-          digitalWrite(OUT1, LOW);//turn off discharge
+          digitalWrite(OUT1, LOW); //turn off discharge
           contctrl = contctrl & 254;
           Pretimer1 = millis();
         }
         else
         {
-          digitalWrite(OUT1, HIGH);//turn on discharge
+          digitalWrite(OUT1, HIGH); //turn on discharge
           if (Pretimer1 + settings.Pretime < millis())
           {
             contctrl = contctrl | 1;
           }
         }
 
-
         if (SOCset == 1)
         {
           if (bms.getLowCellVolt() < settings.UnderVSetpoint || bms.getHighCellVolt() > settings.OverVSetpoint || bms.getHighTemperature() > settings.OverTSetpoint)
           {
-            digitalWrite(OUT2, HIGH);//trip breaker
+            digitalWrite(OUT2, HIGH); //trip breaker
           }
           else
           {
-            digitalWrite(OUT2, LOW);//trip breaker
+            digitalWrite(OUT2, LOW); //trip breaker
           }
         }
       }
@@ -551,11 +549,11 @@ void loop()
         {
           if (bms.getLowCellVolt() < settings.UnderVSetpoint || bms.getHighCellVolt() > settings.OverVSetpoint || bms.getHighTemperature() > settings.OverTSetpoint)
           {
-            digitalWrite(OUT2, HIGH);//trip breaker
+            digitalWrite(OUT2, HIGH); //trip breaker
           }
           else
           {
-            digitalWrite(OUT2, LOW);//trip breaker
+            digitalWrite(OUT2, LOW); //trip breaker
           }
         }
       }
@@ -724,22 +722,22 @@ void loop()
 
       //UV  check
       if (settings.ESSmode == 1)
-    {
-      if (SOCset != 0)
       {
-        if (bms.getLowCellVolt() < settings.UnderVSetpoint || bms.getHighCellVolt() < settings.UnderVSetpoint)
+        if (SOCset != 0)
         {
-          if (debug != 0)
+          if (bms.getLowCellVolt() < settings.UnderVSetpoint || bms.getHighCellVolt() < settings.UnderVSetpoint)
           {
-            SERIALCONSOLE.println("  ");
-            SERIALCONSOLE.print("   !!! Undervoltage Fault !!!");
-            SERIALCONSOLE.println("  ");
+            if (debug != 0)
+            {
+              SERIALCONSOLE.println("  ");
+              SERIALCONSOLE.print("   !!! Undervoltage Fault !!!");
+              SERIALCONSOLE.println("  ");
+            }
+            bmsstatus = Error;
+            ErrorReason = 1;
           }
-          bmsstatus = Error;
-          ErrorReason = 1;
         }
       }
-    }
       else //In 'vehicle' mode
       {
         if (bms.getLowCellVolt() < settings.UnderVSetpoint || bms.getHighCellVolt() < settings.UnderVSetpoint)
@@ -982,7 +980,7 @@ void printbmsstat()
       if (bms.getLowCellVolt() > settings.UnderVSetpoint && bms.getHighCellVolt() < settings.OverVSetpoint)
       {
 
-        if ( bmsstatus == Error)
+        if (bmsstatus == Error)
         {
           SERIALCONSOLE.print(": UNhappy:");
         }
