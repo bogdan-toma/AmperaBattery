@@ -27,7 +27,12 @@
 #include "Logger.h"
 #include "BMSModuleManager.h"
 
-template<class T> inline Print &operator <<(Print &obj, T arg) { obj.print(arg); return obj; } //Lets us stream SerialUSB
+template <class T>
+inline Print &operator<<(Print &obj, T arg)
+{
+    obj.print(arg);
+    return obj;
+} //Lets us stream SerialUSB
 
 extern BMSModuleManager bms;
 
@@ -35,49 +40,56 @@ bool printPrettyDisplay;
 uint32_t prettyCounter;
 int whichDisplay;
 
-SerialConsole::SerialConsole() {
+SerialConsole::SerialConsole()
+{
     init();
 }
 
-void SerialConsole::init() {
+void SerialConsole::init()
+{
     //State variables for serial console
     ptrBuffer = 0;
     state = STATE_ROOT_MENU;
-    loopcount=0;
-    cancel=false;
+    loopcount = 0;
+    cancel = false;
     printPrettyDisplay = false;
     prettyCounter = 0;
     whichDisplay = 0;
 }
 
-void SerialConsole::loop() {  
-    if (SERIALCONSOLE.available()) {
+void SerialConsole::loop()
+{
+    if (SERIALCONSOLE.available())
+    {
         serialEvent();
     }
     if (printPrettyDisplay && (millis() > (prettyCounter + 3000)))
     {
         prettyCounter = millis();
-        if (whichDisplay == 0) bms.printPackSummary();
-        if (whichDisplay == 1) bms.printPackDetails(2,0);
+        if (whichDisplay == 0)
+            bms.printPackSummary();
+        if (whichDisplay == 1)
+            bms.printPackDetails(2, 0);
     }
 }
-              
-void SerialConsole::printMenu() {   
-    Logger::console(0,"\n*************SYSTEM MENU *****************");
-    Logger::console(0,"Enable line endings of some sort (LF, CR, CRLF)");
-    Logger::console(0,"Most commands case sensitive\n");
-    Logger::console(0,"GENERAL SYSTEM CONFIGURATION\n");
-    Logger::console(0,"   h = help (displays this message)");
-    Logger::console(0,"   S = Sleep all boards");
-    Logger::console(0,"   W = Wake up all boards");
-    Logger::console(0,"   C = Clear all board faults");
-    Logger::console(0,"   F = Find all connected boards");
-    Logger::console(0,"   R = Renumber connected boards in sequence");
-    Logger::console(0,"   B = Attempt balancing for 5 seconds");
-    Logger::console(0,"   p = Toggle output of pack summary every 3 seconds");
-    Logger::console(0,"   d = Toggle output of pack details every 3 seconds");
-  
-    Logger::console(0,"   LOGLEVEL=%i - set log level (0=debug, 1=info, 2=warn, 3=error, 4=off)", Logger::getLogLevel());
+
+void SerialConsole::printMenu()
+{
+    Logger::console(0, "\n*************SYSTEM MENU *****************");
+    Logger::console(0, "Enable line endings of some sort (LF, CR, CRLF)");
+    Logger::console(0, "Most commands case sensitive\n");
+    Logger::console(0, "GENERAL SYSTEM CONFIGURATION\n");
+    Logger::console(0, "   h = help (displays this message)");
+    Logger::console(0, "   S = Sleep all boards");
+    Logger::console(0, "   W = Wake up all boards");
+    Logger::console(0, "   C = Clear all board faults");
+    Logger::console(0, "   F = Find all connected boards");
+    Logger::console(0, "   R = Renumber connected boards in sequence");
+    Logger::console(0, "   B = Attempt balancing for 5 seconds");
+    Logger::console(0, "   p = Toggle output of pack summary every 3 seconds");
+    Logger::console(0, "   d = Toggle output of pack details every 3 seconds");
+
+    Logger::console(0, "   LOGLEVEL=%i - set log level (0=debug, 1=info, 2=warn, 3=error, 4=off)", Logger::getLogLevel());
 
     float OverVSetpoint;
     float UnderVSetpoint;
@@ -91,39 +103,49 @@ void SerialConsole::printMenu() {
 
     Commands are submitted by sending line ending (LF, CR, or both)
  */
-void SerialConsole::serialEvent() {
+void SerialConsole::serialEvent()
+{
     int incoming;
     incoming = SERIALCONSOLE.read();
-    if (incoming == -1) { //false alarm....
+    if (incoming == -1)
+    { //false alarm....
         return;
     }
 
-    if (incoming == 10 || incoming == 13) { //command done. Parse it.
+    if (incoming == 10 || incoming == 13)
+    { //command done. Parse it.
         handleConsoleCmd();
         ptrBuffer = 0; //reset line counter once the line has been processed
-    } else {
-        cmdBuffer[ptrBuffer++] = (unsigned char) incoming;
+    }
+    else
+    {
+        cmdBuffer[ptrBuffer++] = (unsigned char)incoming;
         if (ptrBuffer > 79)
             ptrBuffer = 79;
     }
 }
 
-void SerialConsole::handleConsoleCmd() {
+void SerialConsole::handleConsoleCmd()
+{
 
-    if (state == STATE_ROOT_MENU) {
-        if (ptrBuffer == 1) { //command is a single ascii character
+    if (state == STATE_ROOT_MENU)
+    {
+        if (ptrBuffer == 1)
+        { //command is a single ascii character
             handleShortCmd();
-        } else { //if cmd over 1 char then assume (for now) that it is a config line
+        }
+        else
+        { //if cmd over 1 char then assume (for now) that it is a config line
             //handleConfigCmd();
         }
     }
 }
 
-void SerialConsole::handleShortCmd() 
+void SerialConsole::handleShortCmd()
 {
     uint8_t val;
 
-    switch (cmdBuffer[0]) 
+    switch (cmdBuffer[0])
     {
     case 'h':
     case '?':
@@ -132,36 +154,38 @@ void SerialConsole::handleShortCmd()
         break;
     case 'B':
         bms.balanceCells();
-        break;    
+        break;
     case 'p':
-        if (whichDisplay == 1 && printPrettyDisplay) whichDisplay = 0;
+        if (whichDisplay == 1 && printPrettyDisplay)
+            whichDisplay = 0;
         else
         {
             printPrettyDisplay = !printPrettyDisplay;
             if (printPrettyDisplay)
             {
-                Logger::console(0,"Enabling pack summary display, 5 second interval");
+                Logger::console(0, "Enabling pack summary display, 5 second interval");
             }
             else
             {
-                Logger::console(0,"No longer displaying pack summary.");
+                Logger::console(0, "No longer displaying pack summary.");
             }
         }
         break;
     case 'd':
-        if (whichDisplay == 0 && printPrettyDisplay) whichDisplay = 1;
+        if (whichDisplay == 0 && printPrettyDisplay)
+            whichDisplay = 1;
         else
         {
             printPrettyDisplay = !printPrettyDisplay;
             whichDisplay = 1;
             if (printPrettyDisplay)
             {
-                Logger::console(0,"Enabling pack details display, 5 second interval");
+                Logger::console(0, "Enabling pack details display, 5 second interval");
             }
             else
             {
-                Logger::console(0,"No longer displaying pack details.");
-            }            
+                Logger::console(0, "No longer displaying pack details.");
+            }
         }
         break;
     }
