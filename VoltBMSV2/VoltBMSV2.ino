@@ -176,7 +176,7 @@ bool balancecells = false;
 int cellspresent = 0;
 
 //Debugging modes//////////////////
-int debug = 0;
+int debug = 1;
 int inputcheck = 0;     //read digital inputs
 int outputcheck = 0;    //check outputs
 int candebug = 0;       //view can frames
