@@ -212,6 +212,7 @@ void loadSettings()
   settings.balanceHyst = 0.050f;
   settings.logLevel = 2;
   settings.CAP = 30;               //battery size in Ah
+  settings.maxRange = 70;          // maximum range KM
   settings.Pstrings = 2;           // strings in parallel used to divide voltage of pack
   settings.Scells = 48;            //Cells in series
   settings.StoreVsetpoint = 3.8;   // V storage mode charge max
@@ -2195,6 +2196,15 @@ void menu()
         incomingByte = 'b';
       }
       break;
+
+    case 'k': // max range in any unit
+      if (Serial.available() > 0)
+      {
+        settings.maxRange = Serial.parseInt();
+        menuload = 1;
+        incomingByte = 'b';
+      }
+      break;
     }
   }
 
@@ -2587,6 +2597,10 @@ void menu()
       SERIALCONSOLE.print("h - Discharge Current Taper Offset: ");
       SERIALCONSOLE.print(settings.DisTaper * 1000, 0);
       SERIALCONSOLE.print("mV");
+      SERIALCONSOLE.println("  ");
+      SERIALCONSOLE.print("k - Maximum range (km/mi): ");
+      SERIALCONSOLE.print(settings.maxRange, 0);
+      SERIALCONSOLE.print("km/mi");
       SERIALCONSOLE.println("  ");
 
       SERIALCONSOLE.println();
@@ -3015,6 +3029,9 @@ void dashupdate()
   dashEndCommand();
   Serial2.print("champ.val=");
   Serial2.print(settings.chargecurrentmax);
+  dashEndCommand();
+  Serial2.print("range.val=");
+  Serial2.print(settings.maxRange * SOC / 100);
   dashEndCommand();
 }
 
