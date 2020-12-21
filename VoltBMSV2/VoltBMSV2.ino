@@ -825,7 +825,7 @@ void loop()
     looptime1 = loopTimeMain;
     if (settings.ESSmode == 1)
     {
-      chargercomms();
+      chargercomms(0x00);
       if (settings.SerialCan == 1)
       {
         SerialCanCharger();
