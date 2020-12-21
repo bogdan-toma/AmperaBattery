@@ -210,7 +210,7 @@ void loadSettings()
   settings.IgnoreTemp = 0;   // 0 - use both sensors, 1 or 2 only use that sensor
   settings.IgnoreVolt = 0.5; //
   settings.balanceVoltage = 4.0f;
-  settings.balanceHyst = 0.050f;
+  settings.balanceHyst = 0.010f;
   settings.logLevel = 2;
   settings.CAP = 30;               //battery size in Ah
   settings.Pstrings = 2;           // strings in parallel used to divide voltage of pack
@@ -429,11 +429,11 @@ void loop()
         //accurlim = 0;
         if (bms.getHighCellVolt() > settings.balanceVoltage)
         {
-          if (bms.getHighCellVolt() - bms.getLowCellVolt() > settings.balanceHyst) // start balancing at hyst value
+          if (bms.getHighCellVolt() - bms.getLowCellVolt() > (settings.balanceHyst * 2)) // start balancing at hyst value
           {
             balancecells = true;
           }
-          else if (bms.getHighCellVolt() - bms.getLowCellVolt() <= (settings.balanceHyst / 2)) // stop balancing at half hyst
+          else if (bms.getHighCellVolt() - bms.getLowCellVolt() <= settings.balanceHyst) // stop balancing at half hyst
           {
             balancecells = false;
           }
@@ -500,7 +500,7 @@ void loop()
           }
           */
         digitalWrite(OUT3, HIGH); //enable charger
-        if (bms.getHighCellVolt() > settings.balanceVoltage && bms.getHighCellVolt() - bms.getLowCellVolt() > settings.balanceHyst)
+        if (bms.getHighCellVolt() > settings.balanceVoltage && bms.getHighCellVolt() - bms.getLowCellVolt() > (settings.balanceHyst * 2))
         {
           balancecells = true;
           bmsstatus = Ready;
