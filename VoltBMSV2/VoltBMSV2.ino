@@ -471,7 +471,7 @@ void loop()
         }
         else
         {
-          if (bms.getHighCellVolt() > settings.OverVSetpoint || bms.getHighCellVolt() > settings.ChargeVsetpoint)
+          if (bms.getHighCellVolt() > settings.OverVSetpoint || bms.getHighCellVolt() > getChargeVSetpoint())
           {
             digitalWrite(OUT3, LOW); //turn off charger
             contctrl = contctrl & 253;
@@ -483,7 +483,7 @@ void loop()
           {
             if (Charged == 1)
             {
-              if (bms.getHighCellVolt() < (settings.ChargeVsetpoint - settings.ChargeHys))
+              if (bms.getHighCellVolt() < (getChargeVSetpoint() - settings.ChargeHys))
               {
                 Charged = 0;
                 digitalWrite(OUT3, HIGH); //turn on charger
@@ -659,9 +659,9 @@ void loop()
           balancecells = true;
           bmsstatus = Ready;
         }
-        if (bms.getHighCellVolt() > settings.ChargeVsetpoint || bms.getHighTemperature() > settings.OverTSetpoint)
+        if (bms.getHighCellVolt() > getChargeVSetpoint() || bms.getHighTemperature() > settings.OverTSetpoint)
         {
-          if (bms.getAvgCellVolt() > (settings.ChargeVsetpoint - settings.ChargeHys))
+          if (bms.getAvgCellVolt() > (getChargeVSetpoint() - settings.ChargeHys))
           {
             SOCcharged(2);
           }
@@ -1562,8 +1562,8 @@ void VEcan() //communication with Victron system over CAN
   msg.len = 8;
   if (storagemode == 0)
   {
-    msg.buf[0] = lowByte(uint16_t((settings.ChargeVsetpoint * settings.Scells) * 10));
-    msg.buf[1] = highByte(uint16_t((settings.ChargeVsetpoint * settings.Scells) * 10));
+    msg.buf[0] = lowByte(uint16_t((getChargeVSetpoint() * settings.Scells) * 10));
+    msg.buf[1] = highByte(uint16_t((getChargeVSetpoint() * settings.Scells) * 10));
   }
   else
   {
@@ -2940,6 +2940,11 @@ void CAB300()
   }
 }
 
+float getChargeVSetpoint()
+{
+  return settings.ChargeVsetpoint *= maxchargepercent / 100;
+}
+
 void currentlimit()
 {
   if (bmsstatus == Error)
@@ -3022,9 +3027,9 @@ void currentlimit()
       }
       else
       {
-        if (bms.getHighCellVolt() > (settings.ChargeVsetpoint - settings.ChargeHys))
+        if (bms.getHighCellVolt() > (getChargeVSetpoint() - settings.ChargeHys))
         {
-          chargecurrent = chargecurrent - map(bms.getHighCellVolt(), (settings.ChargeVsetpoint - settings.ChargeHys), settings.ChargeVsetpoint, settings.chargecurrentend, settings.chargecurrentmax);
+          chargecurrent = chargecurrent - map(bms.getHighCellVolt(), (getChargeVSetpoint() - settings.ChargeHys), getChargeVSetpoint(), settings.chargecurrentend, settings.chargecurrentmax);
         }
       }
     }
@@ -3280,8 +3285,8 @@ void chargercomms()
     msg.id = 0x1806E5F4; //broadcast to all Elteks
     msg.len = 8;
     msg.ext = 1;
-    msg.buf[0] = highByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
-    msg.buf[1] = lowByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
+    msg.buf[0] = highByte(uint16_t(getChargeVSetpoint() * settings.Scells * 10));
+    msg.buf[1] = lowByte(uint16_t(getChargeVSetpoint() * settings.Scells * 10));
     msg.buf[2] = highByte(chargecurrent / ncharger);
     msg.buf[3] = lowByte(chargecurrent / ncharger);
     msg.buf[4] = 0x00;
@@ -3300,8 +3305,8 @@ void chargercomms()
     msg.buf[0] = 0x01;
     msg.buf[1] = lowByte(1000);
     msg.buf[2] = highByte(1000);
-    msg.buf[3] = lowByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
-    msg.buf[4] = highByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
+    msg.buf[3] = lowByte(uint16_t(getChargeVSetpoint() * settings.Scells * 10));
+    msg.buf[4] = highByte(uint16_t(getChargeVSetpoint() * settings.Scells * 10));
     msg.buf[5] = lowByte(chargecurrent / ncharger);
     msg.buf[6] = highByte(chargecurrent / ncharger);
 
@@ -3336,8 +3341,8 @@ void chargercomms()
     }
     msg.buf[5] = highByte(chargecurrent / ncharger);
     msg.buf[6] = lowByte(chargecurrent / ncharger);
-    msg.buf[3] = highByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells) - chargerendbulk) * 10));
-    msg.buf[4] = lowByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells) - chargerendbulk) * 10));
+    msg.buf[3] = highByte(uint16_t(((getChargeVSetpoint() * settings.Scells) - chargerendbulk) * 10));
+    msg.buf[4] = lowByte(uint16_t(((getChargeVSetpoint() * settings.Scells) - chargerendbulk) * 10));
     Can0.write(msg);
 
     delay(2);
@@ -3355,8 +3360,8 @@ void chargercomms()
       msg.buf[1] = highByte(maxac2 * 10);
       msg.buf[2] = lowByte(maxac2 * 10);
     }
-    msg.buf[3] = highByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells) - chargerend) * 10));
-    msg.buf[4] = lowByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells) - chargerend) * 10));
+    msg.buf[3] = highByte(uint16_t(((getChargeVSetpoint() * settings.Scells) - chargerend) * 10));
+    msg.buf[4] = lowByte(uint16_t(((getChargeVSetpoint() * settings.Scells) - chargerend) * 10));
     msg.buf[5] = highByte(chargecurrent / ncharger);
     msg.buf[6] = lowByte(chargecurrent / ncharger);
     Can0.write(msg);
@@ -3379,10 +3384,10 @@ void chargercomms()
     {
       msg.buf[1] = (chargecurrent * 2);
     }
-    if ((settings.ChargeVsetpoint * settings.Scells) > 200)
+    if ((getChargeVSetpoint() * settings.Scells) > 200)
     {
-      msg.buf[2] = highByte(uint16_t((settings.ChargeVsetpoint * settings.Scells) * 2));
-      msg.buf[3] = lowByte(uint16_t((settings.ChargeVsetpoint * settings.Scells) * 2));
+      msg.buf[2] = highByte(uint16_t((getChargeVSetpoint() * settings.Scells) * 2));
+      msg.buf[3] = lowByte(uint16_t((getChargeVSetpoint() * settings.Scells) * 2));
     }
     else
     {
@@ -3506,8 +3511,8 @@ void CanSerial() //communication with Victron system over CAN
     {
       if (mescycl == 0)
       {
-        dta[0] = highByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
-        dta[1] = lowByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
+        dta[0] = highByte(uint16_t(getChargeVSetpoint() * settings.Scells * 10));
+        dta[1] = lowByte(uint16_t(getChargeVSetpoint() * settings.Scells * 10));
         dta[2] = highByte(chargecurrent / ncharger);
         dta[3] = lowByte(chargecurrent / ncharger);
         dta[4] = 0x00;
@@ -3526,8 +3531,8 @@ void CanSerial() //communication with Victron system over CAN
         dta[0] = 0x01;
         dta[1] = lowByte(1000);
         dta[2] = highByte(1000);
-        dta[3] = lowByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
-        dta[4] = highByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
+        dta[3] = lowByte(uint16_t(getChargeVSetpoint() * settings.Scells * 10));
+        dta[4] = highByte(uint16_t(getChargeVSetpoint() * settings.Scells * 10));
         dta[5] = lowByte(chargecurrent / ncharger);
         dta[6] = highByte(chargecurrent / ncharger);
 
@@ -3563,8 +3568,8 @@ void CanSerial() //communication with Victron system over CAN
         }
         dta[5] = highByte(chargecurrent / ncharger);
         dta[6] = lowByte(chargecurrent / ncharger);
-        dta[3] = highByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells) - chargerendbulk) * 10));
-        dta[4] = lowByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells) - chargerendbulk) * 10));
+        dta[3] = highByte(uint16_t(((getChargeVSetpoint() * settings.Scells) - chargerendbulk) * 10));
+        dta[4] = lowByte(uint16_t(((getChargeVSetpoint() * settings.Scells) - chargerendbulk) * 10));
         can.send(chargerid1, 0, 0, 7, dta);
       }
       if (mescycl == 1)
@@ -3581,8 +3586,8 @@ void CanSerial() //communication with Victron system over CAN
           dta[1] = highByte(maxac2 * 10);
           dta[2] = lowByte(maxac2 * 10);
         }
-        dta[3] = highByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells) - chargerend) * 10));
-        dta[4] = lowByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells) - chargerend) * 10));
+        dta[3] = highByte(uint16_t(((getChargeVSetpoint() * settings.Scells) - chargerend) * 10));
+        dta[4] = lowByte(uint16_t(((getChargeVSetpoint() * settings.Scells) - chargerend) * 10));
         dta[5] = highByte(chargecurrent / ncharger);
         dta[6] = lowByte(chargecurrent / ncharger);
         can.send(chargerid2, 0, 0, 7, dta);
@@ -3610,10 +3615,10 @@ void CanSerial() //communication with Victron system over CAN
         {
           dta[1] = (chargecurrent * 2);
         }
-        if ((settings.ChargeVsetpoint * settings.Scells) > 200)
+        if ((getChargeVSetpoint() * settings.Scells) > 200)
         {
-          dta[2] = highByte(uint16_t((settings.ChargeVsetpoint * settings.Scells) * 2));
-          dta[3] = lowByte(uint16_t((settings.ChargeVsetpoint * settings.Scells) * 2));
+          dta[2] = highByte(uint16_t((getChargeVSetpoint() * settings.Scells) * 2));
+          dta[3] = lowByte(uint16_t((getChargeVSetpoint() * settings.Scells) * 2));
         }
         else
         {
@@ -3632,10 +3637,10 @@ void CanSerial() //communication with Victron system over CAN
       msg.len = 8;
       msg.buf[0] = 0x00;
       msg.buf[1] = 0xDC;
-      if ((settings.ChargeVsetpoint * settings.Scells) > 200)
+      if ((getChargeVSetpoint() * settings.Scells) > 200)
       {
-        msg.buf[2] = highByte(uint16_t((settings.ChargeVsetpoint * settings.Scells) * 10));
-        msg.buf[3] = lowByte(uint16_t((settings.ChargeVsetpoint * settings.Scells) * 10));
+        msg.buf[2] = highByte(uint16_t((getChargeVSetpoint() * settings.Scells) * 10));
+        msg.buf[3] = lowByte(uint16_t((getChargeVSetpoint() * settings.Scells) * 10));
       }
       else
       {
@@ -3644,10 +3649,10 @@ void CanSerial() //communication with Victron system over CAN
         msg.buf[3] = 0xD0;
       }
       msg.buf[4] = 0x00;
-      if ((settings.ChargeVsetpoint * settings.Scells) * chargecurrent < 3300)
+      if ((getChargeVSetpoint() * settings.Scells) * chargecurrent < 3300)
       {
-        msg.buf[5] = highByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells) * chargecurrent) / 240));
-        msg.buf[6] = lowByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells) * chargecurrent) / 240));
+        msg.buf[5] = highByte(uint16_t(((getChargeVSetpoint() * settings.Scells) * chargecurrent) / 240));
+        msg.buf[6] = lowByte(uint16_t(((getChargeVSetpoint() * settings.Scells) * chargecurrent) / 240));
       }
       else //15 A AC limit
       {
