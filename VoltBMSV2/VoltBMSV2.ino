@@ -1083,7 +1083,7 @@ void getcurrent()
   {
     if (settings.cursens == Analoguedual)
     {
-      if (currentact < settings.changecur && currentact > (settings.changecur * -1))
+      if (abs(currentact) < settings.changecur)
       {
         sensor = 1;
         adc->adc0->startContinuous(ACUR1);
@@ -1195,7 +1195,7 @@ void getcurrent()
   {
     if (sensor == 1)
     {
-      if (currentact > 500 || currentact < -500)
+      if (abs(currentact) > 500)
       {
         ampsecond = ampsecond + ((currentact * (millis() - lasttime) / 1000) / 1000);
         lasttime = millis();
@@ -1207,7 +1207,7 @@ void getcurrent()
     }
     if (sensor == 2)
     {
-      if (currentact > settings.changecur || currentact < (settings.changecur * -1))
+      if (abs(currentact) > settings.changecur)
       {
         ampsecond = ampsecond + ((currentact * (millis() - lasttime) / 1000) / 1000);
         lasttime = millis();
@@ -1220,7 +1220,7 @@ void getcurrent()
   }
   else
   {
-    if (currentact > 500 || currentact < -500)
+    if (abs(currentact) > 500)
     {
       ampsecond = ampsecond + ((currentact * (millis() - lasttime) / 1000) / 1000);
       lasttime = millis();
@@ -1364,7 +1364,7 @@ void Prechargecon()
   {
     digitalWrite(OUT4, HIGH); //Negative Contactor Close
     contctrl = 2;
-    if (Pretimer + settings.Pretime > millis() || currentact > settings.Precurrent)
+    if (Pretimer + settings.Pretime > millis() || abs(currentact) > settings.Precurrent)
     {
       digitalWrite(OUT2, HIGH); //precharge
     }
