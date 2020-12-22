@@ -137,7 +137,7 @@ int value;
 float currentact, RawCur;
 float ampsecond;
 unsigned long lasttime;
-unsigned long looptime, UnderTime, looptime1, cleartime = 0; //ms
+unsigned long loopTimeMain, looptime, UnderTime, looptime1, cleartime, loopTimeBalance = 0; //ms
 int currentsense = 14;
 int sensor = 1;
 
@@ -171,7 +171,7 @@ int outputstate = 0;
 int incomingByte = 0;
 int storagemode = 0;
 int x = 0;
-int balancecells;
+bool balancecells = false;
 int cellspresent = 0;
 
 //Debugging modes//////////////////
@@ -184,7 +184,7 @@ int gaugedebug = 0;
 int debugCur = 0;
 int CSVdebug = 0;
 int menuload = 0;
-int debugdigits = 2; //amount of digits behind decimal for voltage reading
+int debugdigits = 3; //amount of digits behind decimal for voltage reading
 
 ADC *adc = new ADC(); // adc object
 void loadSettings()
@@ -378,6 +378,8 @@ void setup()
 
 void loop()
 {
+  loopTimeMain = millis(); // get current loop time
+
   while (Can0.available())
   {
     canread();
@@ -387,11 +389,13 @@ void loop()
   {
     menu();
   }
+
   if (settings.SerialCan == 1)
   {
     SerialCanRecieve();
   }
 
+  // MAIN STATE MACHINE
   if (outputcheck != 1)
   {
     contcon();
@@ -417,11 +421,11 @@ void loop()
         }
         if (bms.getHighCellVolt() > settings.balanceVoltage && bms.getHighCellVolt() > bms.getLowCellVolt() + settings.balanceHyst)
         {
-          balancecells = 1;
+          balancecells = true;
         }
         else
         {
-          balancecells = 0;
+          balancecells = false;
         }
 
         //Pretimer + settings.Pretime > millis();
@@ -574,16 +578,19 @@ void loop()
         digitalWrite(OUT1, LOW); //turn off discharge
         contctrl = 0;            //turn off out 5 and 6
         //accurlim = 0;
-        if (bms.getHighCellVolt() > settings.balanceVoltage && bms.getHighCellVolt() > bms.getLowCellVolt() + settings.balanceHyst)
+        if (bms.getHighCellVolt() > settings.balanceVoltage)
         {
-          bms.balanceCells();
-          balancecells = 1;
+          if (bms.getHighCellVolt() - bms.getLowCellVolt() > (settings.balanceHyst * 2)) // start balancing at hyst value
+          {
+            balancecells = true;
+          }
+          else if (bms.getHighCellVolt() - bms.getLowCellVolt() <= settings.balanceHyst) // stop balancing at half hyst
+          {
+            balancecells = false;
+          }
         }
-        else
-        {
-          balancecells = 0;
-        }
-        if (digitalRead(IN3) == HIGH && (bms.getHighCellVolt() < (settings.ChargeVsetpoint - settings.ChargeHys)) && bms.getHighTemperature() < (settings.OverTSetpoint - settings.WarnToff)) //detect AC present for charging and check not balancing
+
+        if (digitalRead(IN3) == HIGH && !balancecells && bms.getHighTemperature() < (settings.OverTSetpoint - settings.WarnToff)) //detect AC present for charging and check not balancing
         {
           if (settings.ChargerDirect == 1)
           {
@@ -597,6 +604,7 @@ void loop()
         }
         if (digitalRead(IN1) == HIGH) //detect Key ON
         {
+          balancecells = false; // stop balancing
           bmsstatus = Precharge;
           Pretimer = millis();
         }
@@ -615,7 +623,7 @@ void loop()
         {
           bmsstatus = Ready;
         }
-        if (digitalRead(IN3) == HIGH && (bms.getHighCellVolt() < (settings.ChargeVsetpoint - settings.ChargeHys)) && bms.getHighTemperature() < (settings.OverTSetpoint - settings.WarnToff)) //detect AC present for charging and check not balancing
+        if (digitalRead(IN3) == HIGH) //detect AC present for charging
         {
           bmsstatus = Charge;
         }
@@ -623,15 +631,15 @@ void loop()
         break;
 
       case (Charge):
+        Discharge = 0;
+        balancecells = false;
         if (settings.ChargerDirect > 0)
         {
-          Discharge = 0;
           digitalWrite(OUT4, LOW);
           digitalWrite(OUT2, LOW);
           digitalWrite(OUT1, LOW); //turn off discharge
           contctrl = 0;            //turn off out 5 and 6
         }
-        Discharge = 0;
         /*
             if (digitalRead(IN2) == HIGH)
             {
@@ -643,14 +651,10 @@ void loop()
             }
           */
         digitalWrite(OUT3, HIGH); //enable charger
-        if (bms.getHighCellVolt() > settings.balanceVoltage)
+        if (bms.getHighCellVolt() > settings.balanceVoltage && bms.getHighCellVolt() - bms.getLowCellVolt() > (settings.balanceHyst * 2))
         {
-          bms.balanceCells();
-          balancecells = 1;
-        }
-        else
-        {
-          balancecells = 0;
+          balancecells = true;
+          bmsstatus = Ready;
         }
         if (bms.getHighCellVolt() > settings.ChargeVsetpoint || bms.getHighTemperature() > settings.OverTSetpoint)
         {
@@ -679,10 +683,10 @@ void loop()
         digitalWrite(OUT1, LOW); //turn off discharge
         contctrl = 0;            //turn off out 5 and 6
         /*
-                    if (digitalRead(IN3) == HIGH) //detect AC present for charging
-                    {
-                      bmsstatus = Charge;
-                    }
+        if (digitalRead(IN3) == HIGH) //detect AC present for charging
+        {
+          bmsstatus = Charge;
+        }
           */
         if (bms.getLowCellVolt() > settings.UnderVSetpoint && bms.getHighCellVolt() < settings.OverVSetpoint)
         {
@@ -700,10 +704,12 @@ void loop()
     }
   }
 
-  if (millis() - looptime > 1000)
+  // main loop 1000ms
+  if (loopTimeMain - looptime >= 1000) // process sequence 1sec
   {
-    looptime = millis();
+    looptime = loopTimeMain; // reset loop time
     bms.getAllVoltTemp();
+
     //UV  check
     if (settings.ESSmode == 1)
     {
@@ -766,7 +772,9 @@ void loop()
 
     VEcan();
 
-    sendcommand();
+    if (!balancecells)
+      requestBICMdata(); // request data here only if not balancing.
+
     if (cellspresent == 0 && SOCset == 1)
     {
       cellspresent = bms.seriescells();
@@ -790,6 +798,16 @@ void loop()
     }
 
     resetwdog();
+  }
+
+  // can loop 200ms
+  if (loopTimeMain - loopTimeBalance >= 200)
+  {
+    loopTimeBalance = loopTimeMain;           // reset loop time
+    if (balancecells && loopTimeMain > 15000) // delay balancing
+    {
+      sendBalanceCommands();
+    }
   }
 
   if (millis() - cleartime > 5000)
@@ -819,9 +837,10 @@ void loop()
     */
     cleartime = millis();
   }
-  if (millis() - looptime1 > settings.chargerspd)
+
+  if (loopTimeMain - looptime1 > settings.chargerspd)
   {
-    looptime1 = millis();
+    looptime1 = loopTimeMain;
     if (settings.ESSmode == 1)
     {
       chargercomms();
@@ -1028,9 +1047,9 @@ void printbmsstat()
   {
     SERIALCONSOLE.print("| Key ON |");
   }
-  if (balancecells == 1)
+  if (balancecells)
   {
-    SERIALCONSOLE.print("|Balancing Active");
+    SERIALCONSOLE.print("| Balancing Active");
   }
   SERIALCONSOLE.print("  ");
   SERIALCONSOLE.print(cellspresent);
@@ -1617,6 +1636,33 @@ void VEcan() //communication with Victron system over CAN
   msg.buf[6] = bmsmanu[6];
   msg.buf[7] = bmsmanu[7];
   Can0.write(msg);
+}
+
+void sendBalanceCommands() // send CAN commands to balance cells
+{
+  bms.balanceCells();
+  sendcommand();
+}
+
+void requestBICMdata()
+{
+  for (int c = 0; c < 8; c++)
+  {
+    msg.buf[c] = 0;
+  }
+  msg.id = 0x300;
+  msg.len = 8;
+  Can0.write(msg);
+
+  for (int c = 0; c < 8; c++)
+  {
+    msg.buf[c] = 0;
+  }
+  msg.id = 0x310;
+  msg.len = 5;
+  Can0.write(msg);
+
+  sendcommand();
 }
 
 void BMVmessage() //communication with the Victron Color Control System over VEdirect
@@ -3063,7 +3109,7 @@ void outputdebug()
   }
 }
 
-void sendcommand()
+void sendcommand() // send BICM trigger message
 {
   msg.id = 0x200;
   msg.len = 3;
@@ -3208,7 +3254,7 @@ void dashupdate()
   Serial2.write(0xff);
   Serial2.write(0xff);
   Serial2.print("cellbal.val=");
-  Serial2.print(balancecells);
+  Serial2.print(balancecells ? 1 : 0);
   Serial2.write(0xff); // We always have to send this three lines after each command sent to the nextion display.
   Serial2.write(0xff);
   Serial2.write(0xff);
