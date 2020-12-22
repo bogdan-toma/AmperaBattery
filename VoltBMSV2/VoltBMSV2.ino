@@ -42,7 +42,7 @@ SerialConsole console;
 EEPROMSettings settings;
 
 /////Version Identifier/////////
-int firmver = 20122202;
+int firmver = 20122204;
 
 //Curent filter//
 float filterFrequency = 5.0;
@@ -441,7 +441,7 @@ void loop()
             contctrl = contctrl & 253;
             Pretimer = millis();
             Charged = 1;
-            SOCcharged(2);
+            SOCcharged(100);
           }
           else
           {
@@ -477,7 +477,7 @@ void loop()
             contctrl = contctrl & 253;
             Pretimer = millis();
             Charged = 1;
-            SOCcharged(2);
+            SOCcharged(100);
           }
           else
           {
@@ -605,6 +605,7 @@ void loop()
             Pretimer = millis();
           }
         }
+
         if (digitalRead(IN1) == HIGH) //detect Key ON
         {
           balancecells = false; // stop balancing
@@ -636,7 +637,7 @@ void loop()
       case (Charge):
         Discharge = 0;
         balancecells = false;
-        if (settings.ChargerDirect > 0)
+        if (settings.ChargerDirect == 1)
         {
           digitalWrite(OUT4, LOW);
           digitalWrite(OUT2, LOW);
@@ -659,23 +660,26 @@ void loop()
           balancecells = true;
           bmsstatus = Ready;
         }
+
+        // RESET Charge AH
         if (bms.getHighCellVolt() > getChargeVSetpoint() || bms.getHighTemperature() > settings.OverTSetpoint)
         {
-          if (bms.getAvgCellVolt() > (getChargeVSetpoint() - settings.ChargeHys))
+          if (bms.getAvgCellVolt() > (getChargeVSetpoint() - settings.balanceHyst))
           {
-            SOCcharged(2);
+            SOCcharged(100);
           }
           else
           {
-            SOCcharged(1);
+            SOCcharged(95);
           }
-          digitalWrite(OUT3, LOW); //turn off charger
           bmsstatus = Ready;
         }
+
         if (digitalRead(IN3) == LOW) //detect AC not present for charging
         {
           bmsstatus = Ready;
         }
+
         break;
 
       case (Error):
@@ -1369,18 +1373,10 @@ void updateSOC()
   }
 }
 
-void SOCcharged(int y)
+void SOCcharged(int percent)
 {
-  if (y == 1)
-  {
-    SOC = 95;
-    ampsecond = (settings.CAP * settings.Pstrings * 1000) / 0.27777777777778; //reset to full, dependant on given capacity. Need to improve with auto correction for capcity.
-  }
-  if (y == 2)
-  {
-    SOC = 100;
-    ampsecond = (settings.CAP * settings.Pstrings * 1000) / 0.27777777777778; //reset to full, dependant on given capacity. Need to improve with auto correction for capcity.
-  }
+  SOC = percent * (maxchargepercent / 100);
+  ampsecond = (percent / 100 * settings.CAP * settings.Pstrings * 1000) / 0.27777777777778; //reset to full, dependant on given capacity. Need to improve with auto correction for capcity.
 }
 
 void Prechargecon()
@@ -1403,13 +1399,13 @@ void Prechargecon()
       }
       else
       {
-        if (digitalRead(IN3) == HIGH)
-        {
-          bmsstatus = Charge;
-        }
         if (digitalRead(IN1) == HIGH)
         {
           bmsstatus = Drive;
+        }
+        if (digitalRead(IN3) == HIGH)
+        {
+          bmsstatus = Charge;
         }
       }
       digitalWrite(OUT2, LOW);
@@ -2942,7 +2938,7 @@ void CAB300()
 
 float getChargeVSetpoint()
 {
-  return settings.ChargeVsetpoint *= maxchargepercent / 100;
+  return settings.ChargeVsetpoint * (maxchargepercent / 100);
 }
 
 void currentlimit()
@@ -3027,9 +3023,9 @@ void currentlimit()
       }
       else
       {
-        if (bms.getHighCellVolt() > (getChargeVSetpoint() - settings.ChargeHys))
+        if (bms.getHighCellVolt() > (settings.ChargeVsetpoint - settings.ChargeHys))
         {
-          chargecurrent = chargecurrent - map(bms.getHighCellVolt(), (getChargeVSetpoint() - settings.ChargeHys), getChargeVSetpoint(), settings.chargecurrentend, settings.chargecurrentmax);
+          chargecurrent = chargecurrent - map(bms.getHighCellVolt(), (settings.ChargeVsetpoint - settings.ChargeHys), settings.ChargeVsetpoint, settings.chargecurrentend, settings.chargecurrentmax);
         }
       }
     }
