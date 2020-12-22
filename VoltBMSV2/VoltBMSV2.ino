@@ -835,7 +835,10 @@ void loop()
       }
       else
       {
-        chargercomms();
+        if (bmsstatus == Charge)
+        {
+          chargercomms();
+        }
       }
     }
   }
