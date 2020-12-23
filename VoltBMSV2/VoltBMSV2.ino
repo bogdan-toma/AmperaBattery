@@ -42,7 +42,7 @@ SerialConsole console;
 EEPROMSettings settings;
 
 /////Version Identifier/////////
-int firmver = 20122301;
+int firmver = 20122302;
 
 //Curent filter//
 float filterFrequency = 5.0;
@@ -3215,6 +3215,22 @@ void dashDisplayListen() // simple protocol from https://seithan.com/nextion-pro
           dashEndCommand();
 
           break;
+
+        case 0x03: // command to REBOOT BMS
+          if (Serial2.read() == 0x00)
+          {
+            CPU_REBOOT;
+          }
+
+          break;
+
+        case 0x04: // command to RESET AH
+          if (Serial2.read() == 0x00)
+          {
+            SOCset = 0;
+          }
+
+          break;
         }
       }
     }
@@ -3464,7 +3480,7 @@ void SetSerialBaud(uint32_t Speed)
     settings.SerialCanBaud = 9600;
     canSerial.flush();
     canSerial.begin(9600);
-    //can.exitSettingMode();
+    can.exitSettingMode();
     break;
 
   case 19200:
@@ -3472,7 +3488,7 @@ void SetSerialBaud(uint32_t Speed)
     settings.SerialCanBaud = 19200;
     canSerial.flush();
     canSerial.begin(19200);
-    //can.exitSettingMode();
+    can.exitSettingMode();
     break;
 
   case 38400:
@@ -3480,7 +3496,7 @@ void SetSerialBaud(uint32_t Speed)
     settings.SerialCanBaud = 38400;
     canSerial.flush();
     canSerial.begin(38400);
-    //can.exitSettingMode();
+    can.exitSettingMode();
     break;
 
   case 115200:
@@ -3488,7 +3504,7 @@ void SetSerialBaud(uint32_t Speed)
     settings.SerialCanBaud = 115200;
     canSerial.flush();
     canSerial.begin(115200);
-    //can.exitSettingMode();
+    can.exitSettingMode();
     break;
 
   default:
