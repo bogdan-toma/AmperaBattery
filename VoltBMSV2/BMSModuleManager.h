@@ -10,7 +10,7 @@ public:
   int seriescells();
   void clearmodules();
   void decodecan(CAN_message_t &msg);
-  void balanceCells();
+  void balanceCells(uint8_t sequence);
   void getAllVoltTemp();
   void readSetpoints();
   void setBatteryID(int id);

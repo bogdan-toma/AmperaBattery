@@ -105,7 +105,7 @@ void BMSModuleManager::getAllVoltTemp()
     lowestPackVolt = packVolt;
 }
 
-void BMSModuleManager::balanceCells()
+void BMSModuleManager::balanceCells(uint8_t sequence) // 0 or 1 sequence to trigger odd/even cells only
 {
   for (int c = 0; c < 8; c++)
   {
@@ -118,9 +118,12 @@ void BMSModuleManager::balanceCells()
       int balance = 0;
       for (int i = 1; i < 9; i++)
       {
-        if (getAvgCellVolt() < modules[y].getCellVoltage(i))
+        if (sequence ^ (i % 2) == 1) // alternate execution
         {
-          balance = balance | (1 << (i - 1));
+          if (getAvgCellVolt() < modules[y].getCellVoltage(i))
+          {
+            balance = balance | (1 << (i - 1));
+          }
         }
       }
       if (y == 9) // hack for missing module #8
@@ -163,9 +166,12 @@ void BMSModuleManager::balanceCells()
       int balance = 0;
       for (int i = 1; i < 9; i++)
       {
-        if (getAvgCellVolt() < modules[y].getCellVoltage(i))
+        if (sequence ^ (i % 2) == 1) // alternate execution
         {
-          balance = balance | (1 << (i - 1)); // 8 cell internal module bitshift correctly
+          if (getAvgCellVolt() < modules[y].getCellVoltage(i))
+          {
+            balance = balance | (1 << (i - 1));
+          }
         }
       }
       if (y > 11) // hack for missing module #12

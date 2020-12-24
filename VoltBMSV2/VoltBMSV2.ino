@@ -42,7 +42,7 @@ SerialConsole console;
 EEPROMSettings settings;
 
 /////Version Identifier/////////
-int firmver = 20122302;
+int firmver = 20122401;
 
 //Curent filter//
 float filterFrequency = 5.0;
@@ -173,6 +173,7 @@ int incomingByte = 0;
 int storagemode = 0;
 int x = 0;
 bool balancecells = false;
+uint8_t balanceSequence = 0;
 int cellspresent = 0;
 
 //Debugging modes//////////////////
@@ -592,6 +593,10 @@ void loop()
             balancecells = false;
           }
         }
+        else
+        {
+          balancecells = false;
+        }
 
         if (digitalRead(IN3) == HIGH && !balancecells && bms.getHighTemperature() < (settings.OverTSetpoint - settings.WarnToff)) //detect AC present for charging and check not balancing
         {
@@ -811,9 +816,11 @@ void loop()
   if (loopTimeMain - loopTimeBalance >= 200)
   {
     loopTimeBalance = loopTimeMain;           // reset loop time
+
     if (balancecells && loopTimeMain > 15000) // delay balancing
     {
       sendBalanceCommands();
+      balanceSequence ^= 1;
     }
   }
 
@@ -1639,7 +1646,7 @@ void VEcan() //communication with Victron system over CAN
 
 void sendBalanceCommands() // send CAN commands to balance cells
 {
-  bms.balanceCells();
+  bms.balanceCells(balanceSequence);
   sendcommand();
 }
 

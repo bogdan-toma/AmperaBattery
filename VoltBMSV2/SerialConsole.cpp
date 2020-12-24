@@ -153,7 +153,9 @@ void SerialConsole::handleShortCmd()
         printMenu();
         break;
     case 'B':
-        bms.balanceCells();
+        bms.balanceCells(0);
+        delay(200);
+        bms.balanceCells(1);
         break;
     case 'p':
         if (whichDisplay == 1 && printPrettyDisplay)
