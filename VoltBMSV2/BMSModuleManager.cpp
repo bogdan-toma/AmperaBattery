@@ -139,7 +139,7 @@ void BMSModuleManager::balanceCells(uint8_t sequence) // 0 or 1 sequence to trig
   msg.id = 0x300;
   msg.len = 8;
 
-  /*
+  
   SERIALCONSOLE.print("   DEBUG Balance - ID:    ");
   SERIALCONSOLE.print(msg.id, HEX);
   SERIALCONSOLE.println("    ");
@@ -151,7 +151,7 @@ void BMSModuleManager::balanceCells(uint8_t sequence) // 0 or 1 sequence to trig
     SERIALCONSOLE.print(msg.buf[i], BIN);
     SERIALCONSOLE.println(' ');
   }
-  */
+  
 
   Can0.write(msg);
 
@@ -187,7 +187,7 @@ void BMSModuleManager::balanceCells(uint8_t sequence) // 0 or 1 sequence to trig
   msg.id = 0x310;
   msg.len = 5;
 
-  /*
+  
   SERIALCONSOLE.print("   DEBUG Balance - ID:    ");
   SERIALCONSOLE.print(msg.id, HEX);
   SERIALCONSOLE.println("    ");
@@ -199,7 +199,7 @@ void BMSModuleManager::balanceCells(uint8_t sequence) // 0 or 1 sequence to trig
     SERIALCONSOLE.print(msg.buf[i], BIN);
     SERIALCONSOLE.println(' ');
   }
-  */
+
 
   Can0.write(msg);
 }

@@ -42,7 +42,7 @@ SerialConsole console;
 EEPROMSettings settings;
 
 /////Version Identifier/////////
-int firmver = 20122401;
+int firmver = 20122404;
 
 //Curent filter//
 float filterFrequency = 5.0;
@@ -423,7 +423,7 @@ void loop()
             storagemode = 1;
           }
         }
-        if (bms.getHighCellVolt() > settings.balanceVoltage && bms.getHighCellVolt() > bms.getLowCellVolt() + settings.balanceHyst)
+        if (bms.getAvgCellVolt() > settings.balanceVoltage && bms.getHighCellVolt() > bms.getLowCellVolt() + settings.balanceHyst)
         {
           balancecells = true;
         }
@@ -582,9 +582,9 @@ void loop()
         digitalWrite(OUT1, LOW); //turn off discharge
         contctrl = 0;            //turn off out 5 and 6
         //accurlim = 0;
-        if (bms.getHighCellVolt() > settings.balanceVoltage)
+        if (bms.getAvgCellVolt() > settings.balanceVoltage)
         {
-          if (bms.getHighCellVolt() - bms.getLowCellVolt() > (settings.balanceHyst * 2)) // start balancing at hyst value
+          if (bms.getHighCellVolt() - bms.getLowCellVolt() > (settings.balanceHyst * 2.0f)) // start balancing at hyst value
           {
             balancecells = true;
           }
@@ -660,7 +660,7 @@ void loop()
             }
           */
         digitalWrite(OUT3, HIGH); //enable charger
-        if (bms.getHighCellVolt() > settings.balanceVoltage && bms.getHighCellVolt() - bms.getLowCellVolt() > (settings.balanceHyst * 2))
+        if (bms.getAvgCellVolt() > settings.balanceVoltage && bms.getHighCellVolt() - bms.getLowCellVolt() > (settings.balanceHyst * 2.0f))
         {
           balancecells = true;
           bmsstatus = Ready;
@@ -710,7 +710,7 @@ void loop()
     if (settings.cursens == Analoguedual || settings.cursens == Analoguesing)
     {
       if (bmsstatus == Ready && settings.ESSmode == 0) // powersave only in EV Mode
-        currentact = 0;
+        currentact = 0.0f;
       else
         getcurrent();
     }
@@ -1119,7 +1119,7 @@ void getcurrent()
   {
     if (settings.cursens == Analoguedual)
     {
-      if (abs(currentact) < settings.changecur)
+      if (fabs(currentact) < settings.changecur)
       {
         sensor = 1;
         adc->adc0->startContinuous(ACUR1);
@@ -1231,7 +1231,7 @@ void getcurrent()
   {
     if (sensor == 1)
     {
-      if (abs(currentact) > 500)
+      if (fabs(currentact) > 500)
       {
         ampsecond = ampsecond + ((currentact * (millis() - lasttime) / 1000) / 1000);
         lasttime = millis();
@@ -1243,7 +1243,7 @@ void getcurrent()
     }
     if (sensor == 2)
     {
-      if (abs(currentact) > settings.changecur)
+      if (fabs(currentact) > settings.changecur)
       {
         ampsecond = ampsecond + ((currentact * (millis() - lasttime) / 1000) / 1000);
         lasttime = millis();
@@ -1256,7 +1256,7 @@ void getcurrent()
   }
   else
   {
-    if (abs(currentact) > 500)
+    if (fabs(currentact) > 500)
     {
       ampsecond = ampsecond + ((currentact * (millis() - lasttime) / 1000) / 1000);
       lasttime = millis();
@@ -1392,7 +1392,7 @@ void Prechargecon()
   {
     digitalWrite(OUT4, HIGH); //Negative Contactor Close
     contctrl = 2;
-    if (Pretimer + settings.Pretime > millis() || abs(currentact) > settings.Precurrent)
+    if (Pretimer + settings.Pretime > millis() || fabs(currentact) > settings.Precurrent)
     {
       digitalWrite(OUT2, HIGH); //precharge
     }
