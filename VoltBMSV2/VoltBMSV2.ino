@@ -784,7 +784,7 @@ void loop()
 
     VEcan();
 
-    if (!balancecells)
+    //if (!balancecells)
       requestBICMdata(); // request data here only if not balancing.
 
     if (cellspresent == 0 && SOCset == 1)
@@ -813,7 +813,7 @@ void loop()
   }
 
   // can loop 200ms
-  if (loopTimeMain - loopTimeBalance >= 200)
+  if (loopTimeMain - loopTimeBalance >= 200 && loopTimeMain - looptime < 1000)
   {
     loopTimeBalance = loopTimeMain;           // reset loop time
 
