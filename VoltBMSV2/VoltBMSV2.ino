@@ -173,6 +173,7 @@ int incomingByte = 0;
 int storagemode = 0;
 int x = 0;
 bool balancecells = false;
+bool balanceAlternate = false;
 uint8_t balanceSequence = 0;
 int cellspresent = 0;
 
@@ -584,7 +585,7 @@ void loop()
         //accurlim = 0;
         if (bms.getAvgCellVolt() > settings.balanceVoltage)
         {
-          if (bms.getHighCellVolt() - bms.getLowCellVolt() > (settings.balanceHyst * 2.0f)) // start balancing at hyst value
+          if (bms.getHighCellVolt() - bms.getLowCellVolt() > (settings.balanceHyst * 2.0)) // start balancing at hyst value
           {
             balancecells = true;
           }
@@ -660,7 +661,7 @@ void loop()
             }
           */
         digitalWrite(OUT3, HIGH); //enable charger
-        if (bms.getAvgCellVolt() > settings.balanceVoltage && bms.getHighCellVolt() - bms.getLowCellVolt() > (settings.balanceHyst * 2.0f))
+        if (bms.getAvgCellVolt() > settings.balanceVoltage && bms.getHighCellVolt() - bms.getLowCellVolt() > (settings.balanceHyst * 2.0))
         {
           balancecells = true;
           bmsstatus = Ready;
@@ -784,7 +785,7 @@ void loop()
 
     VEcan();
 
-    //if (!balancecells)
+    if (!balancecells)
       requestBICMdata(); // request data here only if not balancing.
 
     if (cellspresent == 0 && SOCset == 1)
@@ -813,14 +814,22 @@ void loop()
   }
 
   // can loop 200ms
-  if (loopTimeMain - loopTimeBalance >= 200 && loopTimeMain - looptime < 1000)
+  if (loopTimeMain - loopTimeBalance >= 200) // && loopTimeMain - looptime < 1000)
   {
     loopTimeBalance = loopTimeMain;           // reset loop time
 
-    if (balancecells && loopTimeMain > 15000) // delay balancing
+    if (balanceAlternate)
     {
-      sendBalanceCommands();
-      balanceSequence ^= 1;
+      requestBICMdata();
+      balanceAlternate = !balanceAlternate;
+    }
+    else
+    {
+      if (balancecells && loopTimeMain > 15000) // delay balancing
+      {
+        sendBalanceCommands();
+        balanceSequence ^= 1;
+      }
     }
   }
 
@@ -1646,12 +1655,14 @@ void VEcan() //communication with Victron system over CAN
 
 void sendBalanceCommands() // send CAN commands to balance cells
 {
-  bms.balanceCells(balanceSequence);
   sendcommand();
+  bms.balanceCells(balanceSequence);
 }
 
 void requestBICMdata()
 {
+  sendcommand();
+
   for (int c = 0; c < 8; c++)
   {
     msg.buf[c] = 0;
@@ -1667,8 +1678,6 @@ void requestBICMdata()
   msg.id = 0x310;
   msg.len = 5;
   Can0.write(msg);
-
-  sendcommand();
 }
 
 void BMVmessage() //communication with the Victron Color Control System over VEdirect
