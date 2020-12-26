@@ -42,7 +42,7 @@ SerialConsole console;
 EEPROMSettings settings;
 
 /////Version Identifier/////////
-int firmver = 20122404;
+int firmver = 20122601;
 
 //Curent filter//
 float filterFrequency = 5.0;
