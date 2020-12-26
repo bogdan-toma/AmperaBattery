@@ -42,7 +42,7 @@ SerialConsole console;
 EEPROMSettings settings;
 
 /////Version Identifier/////////
-int firmver = 20122404;
+int firmver = 20122602;
 
 //Curent filter//
 float filterFrequency = 5.0;
@@ -816,20 +816,21 @@ void loop()
   // can loop 200ms
   if (loopTimeMain - loopTimeBalance >= 200) // && loopTimeMain - looptime < 1000)
   {
-    loopTimeBalance = loopTimeMain;           // reset loop time
+    loopTimeBalance = loopTimeMain; // reset loop time
 
-    if (balanceAlternate)
+    if (balancecells && loopTimeMain > 15000) // delay balancing
     {
-      requestBICMdata();
-      balanceAlternate = !balanceAlternate;
-    }
-    else
-    {
-      if (balancecells && loopTimeMain > 15000) // delay balancing
+      if (balanceAlternate)
+      {
+        requestBICMdata();
+      }
+      else
       {
         sendBalanceCommands();
         balanceSequence ^= 1;
       }
+      
+      balanceAlternate = !balanceAlternate;
     }
   }
 
