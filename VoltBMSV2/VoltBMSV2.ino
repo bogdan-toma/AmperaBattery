@@ -175,6 +175,9 @@ int x = 0;
 bool balancecells = false;
 int cellspresent = 0;
 
+//Display Control
+bool displaySleep = false;
+
 //Debugging modes//////////////////
 int debug = 1;
 int inputcheck = 0;     //read digital inputs
@@ -3250,7 +3253,18 @@ void dashEndCommand()
 
 void dashupdate()
 {
-  Serial2.write("page0.bmsstat.val=");
+  if (bmsstatus == Ready && !displaySleep) { 
+    Serial2.print("sleep=1");
+    dashEndCommand();
+    displaySleep = true;
+  }
+  else if (bmsstatus != Ready && displaySleep) {
+    Serial2.print("sleep=0");
+    dashEndCommand();
+    displaySleep = false;
+  }
+
+  Serial2.print("page0.bmsstat.val=");
   Serial2.print(bmsstatus);
   dashEndCommand();
   Serial2.print("soc.val=");
