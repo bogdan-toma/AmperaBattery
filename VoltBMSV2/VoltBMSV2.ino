@@ -1639,12 +1639,14 @@ void VEcan() //communication with Victron system over CAN
 
 void sendBalanceCommands() // send CAN commands to balance cells
 {
-  bms.balanceCells();
   sendcommand();
+  bms.balanceCells();
 }
 
 void requestBICMdata()
 {
+  sendcommand();
+
   for (int c = 0; c < 8; c++)
   {
     msg.buf[c] = 0;
@@ -1660,8 +1662,6 @@ void requestBICMdata()
   msg.id = 0x310;
   msg.len = 5;
   Can0.write(msg);
-
-  sendcommand();
 }
 
 void BMVmessage() //communication with the Victron Color Control System over VEdirect
