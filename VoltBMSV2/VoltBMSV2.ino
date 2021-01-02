@@ -708,9 +708,9 @@ void loop()
     }
     if (settings.cursens == Analoguedual || settings.cursens == Analoguesing)
     {
-      if (bmsstatus == Ready && settings.ESSmode == 0) // powersave only in EV Mode
-        currentact = 0.0f;
-      else
+      // if (bmsstatus == Ready && settings.ESSmode == 0) // powersave only in EV Mode
+      //   currentact = 0.0f;
+      // else
         getcurrent();
     }
   }
