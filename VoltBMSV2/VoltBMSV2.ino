@@ -422,7 +422,7 @@ void loop()
             storagemode = 1;
           }
         }
-        if (bms.getHighCellVolt() > settings.balanceVoltage && bms.getHighCellVolt() > bms.getLowCellVolt() + settings.balanceHyst)
+        if (bms.getAvgCellVolt() > settings.balanceVoltage && bms.getHighCellVolt() > bms.getLowCellVolt() + settings.balanceHyst)
         {
           balancecells = true;
         }
@@ -581,9 +581,9 @@ void loop()
         digitalWrite(OUT1, LOW); //turn off discharge
         contctrl = 0;            //turn off out 5 and 6
         //accurlim = 0;
-        if (bms.getHighCellVolt() > settings.balanceVoltage)
+        if (bms.getAvgCellVolt() > settings.balanceVoltage)
         {
-          if (bms.getHighCellVolt() - bms.getLowCellVolt() > (settings.balanceHyst * 2)) // start balancing at hyst value
+          if (bms.getHighCellVolt() - bms.getLowCellVolt() > (settings.balanceHyst * 2.0)) // start balancing at hyst value
           {
             balancecells = true;
           }
@@ -655,7 +655,7 @@ void loop()
             }
           */
         digitalWrite(OUT3, HIGH); //enable charger
-        if (bms.getHighCellVolt() > settings.balanceVoltage && bms.getHighCellVolt() - bms.getLowCellVolt() > (settings.balanceHyst * 2))
+        if (bms.getAvgCellVolt() > settings.balanceVoltage && bms.getHighCellVolt() - bms.getLowCellVolt() > (settings.balanceHyst * 2.0))
         {
           balancecells = true;
           bmsstatus = Ready;
