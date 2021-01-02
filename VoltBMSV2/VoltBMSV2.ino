@@ -592,6 +592,10 @@ void loop()
             balancecells = false;
           }
         }
+        else
+        {
+          balancecells = false;
+        }
 
         if (digitalRead(IN3) == HIGH && !balancecells && bms.getHighTemperature() < (settings.OverTSetpoint - settings.WarnToff)) //detect AC present for charging and check not balancing
         {
@@ -705,7 +709,7 @@ void loop()
     if (settings.cursens == Analoguedual || settings.cursens == Analoguesing)
     {
       if (bmsstatus == Ready && settings.ESSmode == 0) // powersave only in EV Mode
-        currentact = 0;
+        currentact = 0.0f;
       else
         getcurrent();
     }
@@ -1112,7 +1116,7 @@ void getcurrent()
   {
     if (settings.cursens == Analoguedual)
     {
-      if (abs(currentact) < settings.changecur)
+      if (fabs(currentact) < settings.changecur)
       {
         sensor = 1;
         adc->adc0->startContinuous(ACUR1);
@@ -1224,7 +1228,7 @@ void getcurrent()
   {
     if (sensor == 1)
     {
-      if (abs(currentact) > 500)
+      if (fabs(currentact) > 500)
       {
         ampsecond = ampsecond + ((currentact * (millis() - lasttime) / 1000) / 1000);
         lasttime = millis();
@@ -1236,7 +1240,7 @@ void getcurrent()
     }
     if (sensor == 2)
     {
-      if (abs(currentact) > settings.changecur)
+      if (fabs(currentact) > settings.changecur)
       {
         ampsecond = ampsecond + ((currentact * (millis() - lasttime) / 1000) / 1000);
         lasttime = millis();
@@ -1249,7 +1253,7 @@ void getcurrent()
   }
   else
   {
-    if (abs(currentact) > 500)
+    if (fabs(currentact) > 500)
     {
       ampsecond = ampsecond + ((currentact * (millis() - lasttime) / 1000) / 1000);
       lasttime = millis();
@@ -1385,7 +1389,7 @@ void Prechargecon()
   {
     digitalWrite(OUT4, HIGH); //Negative Contactor Close
     contctrl = 2;
-    if (Pretimer + settings.Pretime > millis() || abs(currentact) > settings.Precurrent)
+    if (Pretimer + settings.Pretime > millis() || fabs(currentact) > settings.Precurrent)
     {
       digitalWrite(OUT2, HIGH); //precharge
     }
