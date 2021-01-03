@@ -42,7 +42,7 @@ SerialConsole console;
 EEPROMSettings settings;
 
 /////Version Identifier/////////
-int firmver = 20122302;
+int firmver = 21010304;
 
 //Curent filter//
 float filterFrequency = 5.0;
@@ -1392,7 +1392,7 @@ void Prechargecon()
   {
     digitalWrite(OUT4, HIGH); //Negative Contactor Close
     contctrl = 2;
-    if (Pretimer + settings.Pretime > millis() || fabs(currentact) > settings.Precurrent)
+    if (millis() - Pretimer < settings.Pretime || fabs(currentact) > settings.Precurrent)
     {
       digitalWrite(OUT2, HIGH); //precharge
     }
