@@ -118,7 +118,7 @@ void BMSModuleManager::balanceCells()
       int balance = 0;
       for (int i = 1; i < 9; i++)
       {
-        if (getLowCellVolt() < modules[y].getCellVoltage(i))
+        if (getAvgCellVolt() < modules[y].getCellVoltage(i))
         {
           balance = balance | (1 << (i - 1));
         }
@@ -163,7 +163,7 @@ void BMSModuleManager::balanceCells()
       int balance = 0;
       for (int i = 1; i < 9; i++)
       {
-        if (getLowCellVolt() < modules[y].getCellVoltage(i))
+        if (getAvgCellVolt() < modules[y].getCellVoltage(i))
         {
           balance = balance | (1 << (i - 1)); // 8 cell internal module bitshift correctly
         }
